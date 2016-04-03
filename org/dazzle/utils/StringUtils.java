@@ -1,6 +1,7 @@
 package org.dazzle.utils;
 
-/**@author hcqt@qq.com*/
+/**<a href="https://github.com/hcqt/dazzle">https://github.com/hcqt/dazzle</a>
+ * @author hcqt@qq.com*/
 public class StringUtils {
 
 	/**@author hcqt@qq.com*/

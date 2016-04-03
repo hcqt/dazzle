@@ -24,7 +24,8 @@ import org.dazzle.utils.datatype.Object2Long;
 import org.dazzle.utils.datatype.Object2Short;
 import org.dazzle.utils.datatype.Object2String;
 
-/**@see #convert(Class, Object) 
+/**<a href="https://github.com/hcqt/dazzle">https://github.com/hcqt/dazzle</a>
+ * @see #convert(Class, Object) 
  * @author hcqt@qq.com */
 public class DataTypeUtils {
 
