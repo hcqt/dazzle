@@ -79,51 +79,54 @@ public class SpringDaoUtils {
 		;
 	}
 
-	/**@author hcqt@qq.com*/
-	public static final Long insert(
-			JdbcOperations jdbcOperations, 
-			Map<String, String> fieldsMapping, 
-			String tableName, 
-			Map<String, Object> data) {
-		String[] fields = DTU.cvt(String[].class, data.keySet().toArray());
-		StringBuilder sql = insertSql(fieldsMapping, tableName, fields);
-		return insert(jdbcOperations, sql.toString(), fields, data);
-	}
+//	/**@author hcqt@qq.com*/
+//	public static final Long insert(
+//			JdbcOperations jdbcOperations, 
+//			Map<String, String> fieldsMapping, 
+//			String tableName, 
+//			Map<String, Object> data) {
+//		String[] fields = DTU.cvt(String[].class, data.keySet().toArray());
+//		StringBuilder sql = insertSql(fieldsMapping, tableName, fields);
+//		return insert(jdbcOperations, sql.toString(), fields, data);
+//	}
+//
+//	/**@author hcqt@qq.com*/
+//	public static final Long insert(
+//			JdbcOperations jdbcOperations, 
+//			String sql,
+//			Map<String, Object> data) {
+//		String[] fields = DTU.cvt(String[].class, data.keySet().toArray());
+//		return insert(jdbcOperations, sql, fields, data);
+//	}
 
 	/**@author hcqt@qq.com*/
 	public static final Long insert(
 			JdbcOperations jdbcOperations, 
-			String sql,
-			Map<String, Object> data) {
-		String[] fields = DTU.cvt(String[].class, data.keySet().toArray());
-		return insert(jdbcOperations, sql, fields, data);
-	}
-
-	/**@author hcqt@qq.com*/
-	public static final Long insert(
-			JdbcOperations jdbcOperations, 
 			Map<String, String> fieldsMapping, 
-			String[] fields, 
+			Map<String, String> tablesMapping, 
 			String tableName, 
 			Map<String, Object> data) {
-		StringBuilder sql = insertSql(fieldsMapping, tableName, fields);
-		return insert(jdbcOperations, sql.toString(), fields, data);
+		StringBuilder sql = new StringBuilder();
+		List<Object> params = new ArrayList<>();
+		insertSql(fieldsMapping, tablesMapping, tableName, data, sql, params);
+		return insert(jdbcOperations, sql.toString(), params);
 	}
 
 	/**@author hcqt@qq.com*/
 	public static final Long insert(
 			JdbcOperations jdbcOperations, 
 			final String sql,
-			final String[] fields, 
-			final Map<String, Object> data) {
+			final List<Object> params) {
 		KeyHolder keyHolder = new GeneratedKeyHolder();
 		try {
+			Logger.getLogger("org.dazzle.util").debug("sql ==>" + sql.toString());
+			Logger.getLogger("org.dazzle.util").debug("args==>" + params);
 			jdbcOperations.update(
 					new PreparedStatementCreator() {
 						@Override
 						public PreparedStatement createPreparedStatement(Connection conn) throws SQLException {
 							PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-							setData(ps, fields, data);
+							setParams(ps, params);
 							return ps;
 						}
 					}, keyHolder);
@@ -279,6 +282,16 @@ public class SpringDaoUtils {
 			Map<String, String> tablesMapping, 
 			Map<String, String> resultMappping, 
 			Map<String, Object> sqlArgs) {
+		return find(jdbcOperations, fieldsMapping, tablesMapping, resultMapppingTranslate(resultMappping), sqlArgs);
+	}
+	
+	/**@author hcqt@qq.com*/
+	public static final Map<String, Object> find(
+			JdbcOperations jdbcOperations, 
+			Map<String, String> fieldsMapping, 
+			Map<String, String> tablesMapping, 
+			List<Map<String, Object>> resultMappping, 
+			Map<String, Object> sqlArgs) {
 		Object selectFields = DTU.cvt(Object.class, sqlArgs.get("selectFields"));
 		Boolean needResultSequence = DTU.cvt(Boolean.class, sqlArgs.get("needResultSequence"));
 		Boolean autoCount = DTU.cvt(Boolean.class, sqlArgs.get("autoCount"));
@@ -288,7 +301,7 @@ public class SpringDaoUtils {
 		String groupByHaving = DTU.cvt(String.class, sqlArgs.get("groupByHaving"));
 		Object where = DTU.cvt(Object.class, sqlArgs.get("where"));
 		String fromTable = DTU.cvt(String.class, sqlArgs.get("fromTable"));
-		return find(jdbcOperations, fieldsMapping, tablesMapping, resultMapppingTranslate(resultMappping), selectFields, fromTable, where, groupByHaving, orderBy, startNum, rowNum, autoCount, needResultSequence);
+		return find(jdbcOperations, fieldsMapping, tablesMapping, resultMappping, selectFields, fromTable, where, groupByHaving, orderBy, startNum, rowNum, autoCount, needResultSequence);
 	}
 
 	/**@author hcqt@qq.com*/
@@ -520,6 +533,7 @@ public class SpringDaoUtils {
 			tmp.put("field", item.getKey());
 			tmp.put("opt", Opt.EQ);
 			tmp.put("val", item.getValue());
+			tmp.put("conn", "AND");
 			_where.add(tmp);
 		}
 		return _where;
@@ -584,6 +598,22 @@ public class SpringDaoUtils {
 		findRetData.put("hasNextPage", hasNextPage);
 	}
 
+	public static final Integer calcStartNumByPageNum(Integer pageNum, Integer pageSize) {
+		if(pageNum == null) {
+			return null;
+		}
+		if(pageNum <= 0) {
+			return null;
+		}
+		if(pageSize == null) {
+			return null;
+		}
+		if(pageSize <= 0) {
+			return null;
+		}
+		return (pageNum - 1) * pageSize;
+	}
+
 	/**@author hcqt@qq.com*/
 	private static final int findAutoCount(
 			JdbcOperations jdbcOperations, 
@@ -595,7 +625,7 @@ public class SpringDaoUtils {
 		String[] keywords = {"GROUP BY","HAVING","ORDER BY","LIMIT"};
 		String tmp = null;
 		for (String keyword : keywords) {
-			tmp = SU.subStringBeforIgnoreCase(sql, keyword, 1);
+			tmp = SU.subStringBeforeIgnoreCase(sql, keyword, 1);
 			if(tmp != null) {
 				int countNum = SU.subStringCountNum(SU.subStringAfterIgnoreCase(sql, keyword, 1), "?");
 				for (int i = params.size(), j = i - countNum; i > j; i--) {
@@ -660,7 +690,7 @@ public class SpringDaoUtils {
 		for (String item : orderBySplit) {
 			i = SU.indexOfIgnoreCase(item.trim(), "DESC", -1);
 			if(i != -1) {
-				tmp0 = SU.subStringBeforIgnoreCase(item.trim(), "DESC", -1);
+				tmp0 = SU.subStringBeforeIgnoreCase(item.trim(), "DESC", -1);
 				tmp1 = fieldTranslate(tmp0, fieldsMapping);
 				if(null == tmp1) {
 					continue;
@@ -669,7 +699,7 @@ public class SpringDaoUtils {
 			}
 			i = SU.indexOfIgnoreCase(item.trim(), "ASC", -1);
 			if(i != -1) {
-				tmp0 = SU.subStringBeforIgnoreCase(item.trim(), "ASC", -1);
+				tmp0 = SU.subStringBeforeIgnoreCase(item.trim(), "ASC", -1);
 				tmp1 = fieldTranslate(tmp0, fieldsMapping);
 				if(null == tmp1) {
 					continue;
@@ -677,7 +707,7 @@ public class SpringDaoUtils {
 				sql.append(tmp1).append(" ASC,");
 			}
 		}
-		SU.deletePrefix(sql, ",");
+		SU.deleteSuffix(sql, ",");
 	}
 
 	/**@author hcqt@qq.com*/
@@ -702,7 +732,7 @@ public class SpringDaoUtils {
 		 * having关键字前后截断，前边的是groupby的语句，按照逗号再截取，然后把字段进行翻译
 		 * 后半部分可能包含聚合函数，要把聚合函数中的完全限定名、字段名进行解析
 		 */
-		String beforHaving = SU.subStringBeforIgnoreCase(groupByHaving, "HAVING", 1);
+		String beforHaving = SU.subStringBeforeIgnoreCase(groupByHaving, "HAVING", 1);
 		String afterHaving = SU.subStringAfterIgnoreCase(groupByHaving, "HAVING", 1);
 		if(null == beforHaving && null == afterHaving) {
 			beforHaving = groupByHaving;
@@ -733,14 +763,14 @@ public class SpringDaoUtils {
 			tmp = fieldTranslate(item, fieldsMapping);
 			// 这里的字段翻译不准出现AS
 			if(-1 != SU.indexOfIgnoreCase(tmp, " AS ", 1)) {
-				tmp  = SU.subStringBeforIgnoreCase(tmp, " AS ", 1);
+				tmp  = SU.subStringBeforeIgnoreCase(tmp, " AS ", 1);
 			}
 			if(null == tmp || tmp.trim().isEmpty()) {
 				continue;
 			}
 			sql.append(tmp).append(",");
 		}
-		SU.deletePrefix(sql, ",");
+		SU.deleteSuffix(sql, ",");
 	}
 
 	/**@author hcqt@qq.com*/
@@ -769,15 +799,15 @@ public class SpringDaoUtils {
 	/**@author hcqt@qq.com*/
 	private static final String tableTranslate(String ele, Map<String, String> eleMapping) {
 		ele = ele.trim();
-		String currentNameSpace = SU.subStringBefor(ele, ".", -1);
+		String currentNameSpace = SU.subStringBefore(ele, ".", -1);
 		String currentTableAndAlias = SU.subStringAfter(ele, ".", -1);
 		if(null == currentTableAndAlias) {
 			currentTableAndAlias = ele;
 		}
-		String currentTableName = SU.subStringBeforIgnoreCase(currentTableAndAlias, " AS ", -1);
+		String currentTableName = SU.subStringBeforeIgnoreCase(currentTableAndAlias, " AS ", -1);
 		String currentAlias = SU.subStringAfterIgnoreCase(currentTableAndAlias, " AS ", -1);
 		if(null == currentTableName) {
-			currentTableName = SU.subStringBefor(currentTableAndAlias, " ", -1);
+			currentTableName = SU.subStringBefore(currentTableAndAlias, " ", -1);
 		}
 		if(null == currentTableName) {
 			currentTableName = currentTableAndAlias;
@@ -805,15 +835,15 @@ public class SpringDaoUtils {
 	/**@author hcqt@qq.com*/
 	private static final String fieldTranslate(String ele, Map<String, String> eleMapping) {
 		ele = ele.trim();
-		String currentNameSpace = SU.subStringBefor(ele, ".", -1);
+		String currentNameSpace = SU.subStringBefore(ele, ".", -1);
 		String currentTableAndAlias = SU.subStringAfter(ele, ".", -1);
 		if(null == currentTableAndAlias) {
 			currentTableAndAlias = ele;
 		}
-		String currentTableName = SU.subStringBeforIgnoreCase(currentTableAndAlias, " AS ", -1);
+		String currentTableName = SU.subStringBeforeIgnoreCase(currentTableAndAlias, " AS ", -1);
 		String currentAlias = SU.subStringAfterIgnoreCase(currentTableAndAlias, " AS ", -1);
 		if(null == currentTableName) {
-			currentTableName = SU.subStringBefor(currentTableAndAlias, " ", -1);
+			currentTableName = SU.subStringBefore(currentTableAndAlias, " ", -1);
 		}
 		if(null == currentTableName) {
 			currentTableName = currentTableAndAlias;
@@ -906,7 +936,7 @@ public class SpringDaoUtils {
 		if(null == firstSeparator) {
 			current = table;
 		} else {
-			current = SU.subStringBeforIgnoreCase(table, firstSeparator, 1);
+			current = SU.subStringBeforeIgnoreCase(table, firstSeparator, 1);
 		}
 		if(tableNameActuallyIsField(current) == null) {
 			sql.append(tableTranslate(current, tablesMapping));
@@ -1045,6 +1075,7 @@ public class SpringDaoUtils {
 			for (Object item : list) {
 				whereSql(sql, item, fieldsMapping, params);
 			}
+			SU.deleteSuffix(sql, "AND");
 			sql.append(")");
 		}
 		else if(Map.class.isAssignableFrom(where.getClass())) {
@@ -1059,7 +1090,7 @@ public class SpringDaoUtils {
 					whereSqlMap0(sql, opt, map, fieldsMapping, params);
 				}
 				if(null != conn) {
-					sql.append(conn.trim().toUpperCase());
+					sql.append(" ").append(conn.trim().toUpperCase());
 				}
 			}
 		}
@@ -1498,17 +1529,51 @@ public class SpringDaoUtils {
 		return sql;
 	}
 
+//	/**@author hcqt@qq.com*/
+//	private static final StringBuilder insertSql(
+//			Map<String, String> fieldsMapping, 
+//			String tableName, 
+//			String[] fields) {
+//		StringBuilder sql = new StringBuilder();
+//		sql.append("INSERT INTO");
+//		sql.append(" ").append(tableName);
+//		insertSqlAppendFields0(fieldsMapping, sql, fields);
+//		sql.append(" ").append("VALUES");
+//		insertSqlAppendFields1(fieldsMapping, sql, fields);
+//		return sql;
+//	}
+//	
 	/**@author hcqt@qq.com*/
 	private static final StringBuilder insertSql(
 			Map<String, String> fieldsMapping, 
+			Map<String, String> tablesMapping, 
 			String tableName, 
-			String[] fields) {
-		StringBuilder sql = new StringBuilder();
+			Map<String, Object> data, 
+			StringBuilder sql, 
+			List<Object> params) {
 		sql.append("INSERT INTO");
-		sql.append(" ").append(tableName);
-		insertSqlAppendFields0(fieldsMapping, sql, fields);
+		tableSql(sql, tablesMapping, fieldsMapping, tableName);
+		sql.append(" (");
+		for (Entry<String, Object> param : data.entrySet()) {
+			if(param == null) {
+				continue;
+			}
+			sql.append(fieldTranslate(param.getKey(), fieldsMapping));
+			sql.append(",");
+		}
+		SU.deleteSuffix(sql, ",");
+		sql.append(")");
 		sql.append(" ").append("VALUES");
-		insertSqlAppendFields1(fieldsMapping, sql, fields);
+		sql.append(" (");
+		for (Entry<String, Object> it : data.entrySet()) {
+			if(it == null) {
+				continue;
+			}
+			sql.append("?,");
+			params.add(it.getValue());
+		}
+		SU.deleteSuffix(sql, ",");
+		sql.append(")");
 		return sql;
 	}
 
@@ -1536,7 +1601,7 @@ public class SpringDaoUtils {
 		} else {
 			// TODO 
 		}
-		SU.deletePrefix(sql, ",");
+		SU.deleteSuffix(sql, ",");
 //		sql.delete(sql.length() - 1, sql.length());
 //		updateSqlAppendWhere(sql, fieldsMapping, where);
 		whereSql(sql, where, fieldsMapping, params);
@@ -1816,52 +1881,52 @@ public class SpringDaoUtils {
 //			ps.setURL(parameterIndex, x);
 		}
 	}
-
-	/**@author hcqt@qq.com*/
-	private static final void insertSqlAppendFields0(
-			Map<String, String> fieldsMapping, 
-			StringBuilder sql, 
-			String[] fields) {
-		sql.append("(");
-		String tbField = null;
-		for (String field : fields) {
-			if(null == fieldsMapping) {
-				tbField = field;
-			} else {
-				tbField = fieldsMapping.get(field);
-			}
-			if(null == tbField) {
-				continue;
-			}
-			sql.append(tbField);
-			sql.append(",");
-		}
-		sql.delete(sql.length() - 1, sql.length());
-		sql.append(")");
-	}
-
-	/**@author hcqt@qq.com*/
-	private static final void insertSqlAppendFields1(
-			Map<String, String> fieldsMapping, 
-			StringBuilder sql, 
-			String[] fields) {
-		sql.append("(");
-		String tbField = null;
-		for (String field : fields) {
-			if(null == fieldsMapping) {
-				tbField = field;
-			} else {
-				tbField = fieldsMapping.get(field);
-			}
-			if(null == tbField) {
-				continue;
-			}
-			sql.append("?");
-			sql.append(",");
-		}
-		sql.delete(sql.length() - 1, sql.length());
-		sql.append(")");
-	}
+//
+//	/**@author hcqt@qq.com*/
+//	private static final void insertSqlAppendFields0(
+//			Map<String, String> fieldsMapping, 
+//			StringBuilder sql, 
+//			String[] fields) {
+//		sql.append("(");
+//		String tbField = null;
+//		for (String field : fields) {
+//			if(null == fieldsMapping) {
+//				tbField = field;
+//			} else {
+//				tbField = fieldsMapping.get(field);
+//			}
+//			if(null == tbField) {
+//				continue;
+//			}
+//			sql.append(tbField);
+//			sql.append(",");
+//		}
+//		sql.delete(sql.length() - 1, sql.length());
+//		sql.append(")");
+//	}
+//
+//	/**@author hcqt@qq.com*/
+//	private static final void insertSqlAppendFields1(
+//			Map<String, String> fieldsMapping, 
+//			StringBuilder sql, 
+//			String[] fields) {
+//		sql.append("(");
+//		String tbField = null;
+//		for (String field : fields) {
+//			if(null == fieldsMapping) {
+//				tbField = field;
+//			} else {
+//				tbField = fieldsMapping.get(field);
+//			}
+//			if(null == tbField) {
+//				continue;
+//			}
+//			sql.append("?");
+//			sql.append(",");
+//		}
+//		sql.delete(sql.length() - 1, sql.length());
+//		sql.append(")");
+//	}
 
 	private static final String msg2Code = "spring_dao_28219";
 	private static final String msg2 = "输入值数据长度超出数据库限制，详情——{0}";

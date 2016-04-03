@@ -1,49 +1,35 @@
 package org.dazzle.utils.datatype;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
+
+import org.dazzle.utils.DataTypeUtils;
 
 /** @author hcqt@qq.com */
 public class Object2Long {
 
-	private static final BigDecimal MAX_VALUE = BigDecimal.valueOf(Long.MAX_VALUE);
-	private static final BigDecimal MIN_VALUE = BigDecimal.valueOf(Long.MIN_VALUE);
-
 	/** @author hcqt@qq.com */
 	public static final Long convert(final Object targetObject) {
-		if(targetObject instanceof String) {
-			CatchDataTypeException.isNumber(Long.class, targetObject);
-			BigDecimal targetData = new BigDecimal(targetObject.toString());
-			CatchDataTypeException.isDecimal(Long.class, targetData);
-			CatchDataTypeException.isBetweenSpan(Long.class, targetData, MAX_VALUE, MIN_VALUE);
-			return Long.valueOf(targetData.setScale(0, BigDecimal.ROUND_CEILING).toString());
-		} 
-		else if(targetObject instanceof Byte) {
-			return Long.valueOf((Byte) targetObject);
+		if(targetObject.getClass().isEnum()) {
+			return Long.valueOf(((Enum<?>)targetObject).ordinal());
 		}
-		else if(targetObject instanceof Short) {
-			return Long.valueOf((Short) targetObject);
+		CatchDataTypeException.isNumber(Long.class, targetObject);
+		if(DataTypeUtils.isChar(targetObject)) {
+			return Long.valueOf((int) targetObject.toString().charAt(0));
 		}
-		else if(targetObject instanceof Integer) {
-			return Long.valueOf((Integer) targetObject);
-		}
-		else if(targetObject instanceof BigDecimal) {
-			BigDecimal targetData = (BigDecimal) targetObject;
-			CatchDataTypeException.isDecimal(Long.class, targetData);
-			CatchDataTypeException.isBetweenSpan(Long.class, targetData, MAX_VALUE, MIN_VALUE);
-			return Long.valueOf(targetData.setScale(0,BigDecimal.ROUND_CEILING).toString());
-		}
-		else if(targetObject instanceof BigInteger) {
-			BigInteger targetData = (BigInteger)targetObject;
-			CatchDataTypeException.isBetweenSpan(Long.class, new BigDecimal(targetData), MAX_VALUE, MIN_VALUE);
+		BigDecimal targetData = new BigDecimal(targetObject.toString());
+		CatchDataTypeException.notDecimal(Long.class, targetData);
+		CatchDataTypeException.isBetweenSpan(Long.class, targetData);
+		if(targetObject instanceof String
+				|| targetObject instanceof Long
+				|| targetObject instanceof Byte
+				|| targetObject instanceof Short
+				|| targetObject instanceof Integer
+				|| targetObject instanceof BigDecimal
+				|| targetObject instanceof Float
+				|| targetObject instanceof Double
+				) {
 			return Long.valueOf(targetData.longValue());
 		}
-		else if(targetObject instanceof Float || targetObject instanceof Double) {
-			BigDecimal targetData = new BigDecimal(targetObject.toString());
-			CatchDataTypeException.isDecimal(Long.class, targetData);
-			CatchDataTypeException.isBetweenSpan(Long.class, targetData, MAX_VALUE, MIN_VALUE);
-			return Long.valueOf(targetData.setScale(0,BigDecimal.ROUND_CEILING).toString());
-		} 
 		else {
 			throw CatchDataTypeException.returnCouldNotConvertException(Long.class, targetObject);
 		}

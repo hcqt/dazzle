@@ -47,7 +47,7 @@ public class NetUtils {
 			HttpServletResponse response, 
 			String content) {
 		Map<String, String> header = new HashMap<>();
-		header.put("Content-Type", "text/plain; chatset=utf-8");
+		header.put("Content-Type", "text/plain; charset=utf-8");
 		print(response, header, content);
 	}
 
@@ -56,7 +56,7 @@ public class NetUtils {
 			HttpServletResponse response, 
 			String content) {
 		Map<String, String> header = new HashMap<>();
-		header.put("Content-Type", "application/json; chatset=utf-8");
+		header.put("Content-Type", "application/json; charset=utf-8");
 		print(response, header, content);
 	}
 
@@ -69,7 +69,7 @@ public class NetUtils {
 			header = new HashMap<>();
 		}
 		if(null == MU.getIgnoreCaseTrim(header, "Content-Type")) {
-			header.put("Content-Type", "text/html; chatset=utf-8");
+			header.put("Content-Type", "text/html; charset=utf-8");
 		}
 		for (Entry<String, String> item : header.entrySet()) {
 			if(null == item.getKey()) {

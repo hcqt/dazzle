@@ -1,6 +1,6 @@
 package org.dazzle.utils;
 
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -76,6 +76,11 @@ public class MapUtils {
 		}
 		return DTU.convert(clazz, map.get(keys[keys.length]));
 	}
+	
+	/** @author hcqt@qq.com */
+	public static final <T extends Map<? extends String, ?>> Object put(Map<String, Object> map, String express, Object val) {
+		return put(map, express, val, null);
+	}
 
 	/** @author hcqt@qq.com */
 	@SuppressWarnings("unchecked")
@@ -91,6 +96,9 @@ public class MapUtils {
 		}
 		if(keys.length <= 0) {
 			return null;
+		}
+		if(newMapType == null) {
+			newMapType = (Class<T>) HashMap.class;
 		}
 		if(map == null) {
 			map = (Map<String, Object>) put0(newMapType);
@@ -147,28 +155,5 @@ public class MapUtils {
 			throw new BaseException("ser_map_k43hD", "您传入的类型{0}无法实例化，详情:{1}", e, newMapType.getName(), EU.out(e));
 		}
 	}
-	
-//public static void main(String[] args) {
-//	DT.convert(Float.class, 0.2d);
-//}
-//
-//	public static void main(String[] args) {
-//		Map<String, Object> a = new LinkedHashMap<>();
-////		a.put("MAP_SP", new byte[][][]{});
-////		System.out.println(get(byte[][][].class, a, "MAP_SP.1"));
-//////		System.out.println(put(a, "MAP_SP.1"));
-////		System.out.println(put(a, "MAP_SP", "xxx", HashMap.class));
-//		
-//		Map<String, Object> x = new LinkedHashMap<>();
-//		Map<String, Object> y = new LinkedHashMap<>();
-//		x.put("a", y);
-//		y.put("b", "b");
-//		a.put("MAP_SP", x);
-//		System.out.println(a);
-////		System.out.println(put(a, "MAP_SP.a.b.c", "xxx", LinkedHashMap.class));
-////		System.out.println(put(a, "MAP_SP.a.b", "xxx", LinkedHashMap.class));
-////		System.out.println(put(a, "MAP_SP", "xxx"));
-//		System.out.println(a);
-//		
-//	}
+
 }

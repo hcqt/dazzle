@@ -2,75 +2,36 @@ package org.dazzle.utils.datatype;
 
 import java.math.BigDecimal;
 
-import org.dazzle.utils.RegexUtil;
+import org.dazzle.utils.DataTypeUtils;
 
 /** @author hcqt@qq.com */
 public class Object2Byte {
 
 	/** @author hcqt@qq.com */
-	@SuppressWarnings("unchecked")
-	public static final <T> T convert(final Object targetObject) {
-		if(targetObject instanceof String) {
-			if(null != RegexUtil.find("^(\\-|\\+)?\\d+(\\.\\d+)?$", targetObject.toString())) {
-				BigDecimal targetData = new BigDecimal((String)targetObject);
-				BigDecimal bigDecimal = targetData.setScale(0,BigDecimal.ROUND_CEILING);
-				if(targetData.compareTo(bigDecimal) == 0) {
-					if(new BigDecimal(Byte.MAX_VALUE).compareTo(targetData) >=0 
-							&& new BigDecimal(Byte.MIN_VALUE).compareTo(targetData) <=0) {
-						return (T) Byte.valueOf(bigDecimal.toString());
-					}
-				}
-			} 
+	public static final <T> Byte convert(Object targetObject) {
+		if(targetObject.getClass().isEnum()) {
+			return convert(((Enum<?>)targetObject).ordinal());
 		}
-		else if(targetObject instanceof Short) {
-			if(Byte.MAX_VALUE >= ((Short) targetObject)
-					&& Byte.MIN_VALUE <= ((Short) targetObject)) {
-				return (T) Byte.valueOf(targetObject.toString());
-			}
+		CatchDataTypeException.isNumber(Byte.class, targetObject);
+		if(DataTypeUtils.isChar(targetObject)) {
+			return convert(Integer.valueOf((int) targetObject.toString().charAt(0)));
 		}
-		else if(targetObject instanceof Integer) {
-			if(Byte.MAX_VALUE >= ((Integer) targetObject)
-					&& Byte.MIN_VALUE <= ((Integer) targetObject)) {
-				return (T) Byte.valueOf(targetObject.toString());
-			}
+		BigDecimal targetData = new BigDecimal(targetObject.toString());
+		CatchDataTypeException.notDecimal(Byte.class, targetData);
+		CatchDataTypeException.isBetweenSpan(Byte.class, targetData);
+		if(targetObject instanceof String
+				|| targetObject instanceof Long
+				|| targetObject instanceof Byte
+				|| targetObject instanceof Short
+				|| targetObject instanceof Integer
+				|| targetObject instanceof BigDecimal
+				|| targetObject instanceof Float
+				|| targetObject instanceof Double) {
+			return Byte.valueOf(targetData.byteValue());
 		}
-		else if(targetObject instanceof Long) {
-			if(Byte.MAX_VALUE >= ((Long) targetObject)
-					&& Byte.MIN_VALUE <= ((Long) targetObject)) {
-				return (T) Byte.valueOf(targetObject.toString());
-			}
+		else {
+			throw CatchDataTypeException.returnCouldNotConvertException(Byte.class, targetObject);
 		}
-		else if(targetObject instanceof BigDecimal) {
-			BigDecimal targetData = (BigDecimal)targetObject;
-			BigDecimal bigDecimal = targetData.setScale(0,BigDecimal.ROUND_CEILING);
-			if(targetData.compareTo(bigDecimal) == 0) {
-				if(new BigDecimal(Byte.MAX_VALUE).compareTo(targetData) >=0 
-						&& new BigDecimal(Byte.MIN_VALUE).compareTo(targetData) <=0) {
-					return (T) Byte.valueOf(bigDecimal.toString());
-				}
-			}
-		}
-		else if(targetObject instanceof Float) {
-			BigDecimal targetData = new BigDecimal(targetObject.toString());
-			BigDecimal bigDecimal = targetData.setScale(0,BigDecimal.ROUND_CEILING);
-			if(targetData.compareTo(bigDecimal) == 0) {
-				if(new BigDecimal(Byte.MAX_VALUE).compareTo(targetData) >=0 
-						&& new BigDecimal(Byte.MIN_VALUE).compareTo(targetData) <=0) {
-					return (T) Byte.valueOf(bigDecimal.toString());
-				}
-			}
-		}
-		else if(targetObject instanceof Double) {
-			BigDecimal targetData = new BigDecimal(targetObject.toString());
-			BigDecimal bigDecimal = targetData.setScale(0,BigDecimal.ROUND_CEILING);
-			if(targetData.compareTo(bigDecimal) == 0) {
-				if(new BigDecimal(Byte.MAX_VALUE).compareTo(targetData) >=0 
-						&& new BigDecimal(Byte.MIN_VALUE).compareTo(targetData) <=0) {
-					return (T) Byte.valueOf(bigDecimal.toString());
-				}
-			}
-		}
-		return null;
 	}
 
 }

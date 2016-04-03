@@ -77,9 +77,9 @@ public class BeanUtils {
 			needSequence = false;
 		}
 		if(needSequence) {
-			ret = new LinkedHashMap<>();
+			ret = new LinkedHashMap<String, Object>();
 		} else {
-			ret = new HashMap<>();
+			ret = new HashMap<String, Object>();
 		}
 		Class<?> clazz = bean.getClass();
 		List<String> fieldList = null;
@@ -100,7 +100,7 @@ public class BeanUtils {
 	/** @author hcqt@qq.com */
 	public static final <S, T> T bean2Bean(S obj, Class<T> clazz) {
 		List<String> fields = getAllFieldName(clazz);
-		Map<String, String> fieldMapping = new HashMap<>(); 
+		Map<String, String> fieldMapping = new HashMap<String, String>(); 
 		for (String field : fields) {
 			fieldMapping.put(field, field);
 		}
@@ -130,7 +130,7 @@ public class BeanUtils {
 
 	/** @author hcqt@qq.com */
 	private static final List<String> getAllFieldName (Class<?> clazz) {
-		List<String> ret = new ArrayList<>();
+		List<String> ret = new ArrayList<String>();
 		if(null == clazz) {
 			return ret;
 		}

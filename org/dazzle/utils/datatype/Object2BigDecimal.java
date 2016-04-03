@@ -7,29 +7,13 @@ public class Object2BigDecimal {
 
 	/** @author hcqt@qq.com */
 	public static final BigDecimal convert(final Object targetObject) {
-		if(targetObject instanceof String) {
-			CatchDataTypeException.isNumber(BigDecimal.class, targetObject);
-			return new BigDecimal((String) targetObject);
+		if(targetObject.getClass().isEnum()) {
+			return BigDecimal.valueOf(((Enum<?>)targetObject).ordinal());
 		}
-		else if(targetObject instanceof Byte) {
+		CatchDataTypeException.isNumber(BigDecimal.class, targetObject);
+		try {
 			return new BigDecimal(targetObject.toString());
-		}
-		else if(targetObject instanceof Integer) {
-			return new BigDecimal(targetObject.toString());
-		}
-		else if(targetObject instanceof Short) {
-			return new BigDecimal(targetObject.toString());
-		}
-		else if(targetObject instanceof Long) {
-			return new BigDecimal(targetObject.toString());
-		}
-		else if(targetObject instanceof Double) {
-			return new BigDecimal(targetObject.toString());
-		}
-		else if(targetObject instanceof Float) {
-			return new BigDecimal(targetObject.toString());
-		}
-		else {
+		} catch(Exception e) {
 			throw CatchDataTypeException.returnCouldNotConvertException(BigDecimal.class, targetObject);
 		}
 	}

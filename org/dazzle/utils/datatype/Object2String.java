@@ -4,7 +4,6 @@ import java.util.Date;
 
 import org.dazzle.utils.DU;
 
-
 /** @author hcqt@qq.com */
 public class Object2String {
 

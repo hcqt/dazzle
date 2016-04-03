@@ -2,35 +2,33 @@ package org.dazzle.utils.datatype;
 
 import java.math.BigDecimal;
 
+import org.dazzle.utils.DataTypeUtils;
+
 /** @author hcqt@qq.com */
 public class Object2Short {
 
-	private static final BigDecimal MAX_VALUE = BigDecimal.valueOf(Short.MAX_VALUE);
-	private static final BigDecimal MIN_VALUE = BigDecimal.valueOf(Short.MIN_VALUE);
-
 	/** @author hcqt@qq.com */
 	public static final Short convert(final Object targetObject) {
-		if(targetObject instanceof String) {
-			CatchDataTypeException.isNumber(Short.class, targetObject);
-			BigDecimal targetData = new BigDecimal(targetObject.toString());
-			CatchDataTypeException.isDecimal(Short.class, targetData);
-			CatchDataTypeException.isBetweenSpan(Short.class, targetData, MAX_VALUE, MIN_VALUE);
-			return Short.valueOf(targetData.setScale(0, BigDecimal.ROUND_CEILING).toString());
+		if(targetObject.getClass().isEnum()) {
+			return convert(((Enum<?>)targetObject).ordinal());
 		}
-		else if(targetObject instanceof Byte) {
-			return Short.valueOf((Byte) targetObject);
+		CatchDataTypeException.isNumber(Short.class, targetObject);
+		if(DataTypeUtils.isChar(targetObject)) {
+			return convert(Integer.valueOf((int) targetObject.toString().charAt(0)));
 		}
-		else if(targetObject instanceof BigDecimal) {
-			BigDecimal targetData = (BigDecimal) targetObject;
-			CatchDataTypeException.isDecimal(Short.class, targetData);
-			CatchDataTypeException.isBetweenSpan(Short.class, targetData, MAX_VALUE, MIN_VALUE);
-			return Short.valueOf(targetData.setScale(0, BigDecimal.ROUND_CEILING).toString());
-		}
-		else if(targetObject instanceof Float || targetObject instanceof Double) {
-			BigDecimal targetData = new BigDecimal(targetObject.toString());
-			CatchDataTypeException.isDecimal(Short.class, targetData);
-			CatchDataTypeException.isBetweenSpan(Short.class, targetData, MAX_VALUE, MIN_VALUE);
-			return Short.valueOf(targetData.setScale(0, BigDecimal.ROUND_CEILING).toString());
+		BigDecimal targetData = new BigDecimal(targetObject.toString());
+		CatchDataTypeException.notDecimal(Short.class, targetData);
+		CatchDataTypeException.isBetweenSpan(Short.class, targetData);
+		if(targetObject instanceof String
+				|| targetObject instanceof Long
+				|| targetObject instanceof Byte
+				|| targetObject instanceof Short
+				|| targetObject instanceof Integer
+				|| targetObject instanceof BigDecimal
+				|| targetObject instanceof Float
+				|| targetObject instanceof Double
+				) {
+			return Short.valueOf(targetData.shortValue());
 		}
 		else {
 			throw CatchDataTypeException.returnCouldNotConvertException(Short.class, targetObject);

@@ -12,7 +12,7 @@ public class Object2Character {
 				return (T) Character.valueOf((tmp).charAt(0));
 			}
 		}
-		return null;
+		throw CatchDataTypeException.returnCouldNotConvertException(Character.class, targetObject);
 	}
 
 }

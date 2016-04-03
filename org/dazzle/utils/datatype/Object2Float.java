@@ -1,51 +1,32 @@
 package org.dazzle.utils.datatype;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
+
+import org.dazzle.utils.DataTypeUtils;
 
 /** @author hcqt@qq.com */
 public class Object2Float {
 
-	private static final BigDecimal MAX_VALUE = BigDecimal.valueOf(Float.MAX_VALUE);
-	private static final BigDecimal MIN_VALUE = BigDecimal.valueOf(Float.MIN_VALUE);
-
 	/** @author hcqt@qq.com */
 	public static final Float convert(final Object targetObject) {
-		if(targetObject instanceof String) {
-			CatchDataTypeException.isNumber(Float.class, targetObject);
-			BigDecimal targetData = new BigDecimal((String)targetObject);
-			CatchDataTypeException.isBetweenSpan(Float.class, targetData, MAX_VALUE, MIN_VALUE);
-			return Float.valueOf(targetData.setScale(0, RoundingMode.HALF_UP).toString());
+		if(targetObject.getClass().isEnum()) {
+			return convert(((Enum<?>)targetObject).ordinal());
 		}
-		else if(targetObject instanceof Byte) {
-			return Float.valueOf((Byte) targetObject);
+		CatchDataTypeException.isNumber(Float.class, targetObject);
+		if(DataTypeUtils.isChar(targetObject)) {
+			return convert(Integer.valueOf((int) targetObject.toString().charAt(0)));
 		}
-		else if(targetObject instanceof Integer) {
-			return Float.valueOf((Integer) targetObject);
-		}
-		else if(targetObject instanceof Short) {
-			return Float.valueOf((Short) targetObject);
-		}
-		else if(targetObject instanceof Long) {
-			return Float.valueOf((Long) targetObject);
-		}
-		else if(targetObject instanceof Float) {
-			return Float.valueOf((Float) targetObject);
-		}
-		else if(targetObject instanceof Double) {
-			return new Float((Double) targetObject);
-		}
-		else if(targetObject instanceof BigDecimal) {
-			BigDecimal targetData = (BigDecimal) targetObject;
-			CatchDataTypeException.isBetweenSpan(Float.class, targetData, MAX_VALUE, MIN_VALUE);
+		BigDecimal targetData = new BigDecimal(targetObject.toString());
+		CatchDataTypeException.isBetweenSpan(Float.class, targetData);
+		if(targetObject instanceof String
+				|| targetObject instanceof Long
+				|| targetObject instanceof Byte
+				|| targetObject instanceof Short
+				|| targetObject instanceof Integer
+				|| targetObject instanceof BigDecimal
+				|| targetObject instanceof Float
+				|| targetObject instanceof Double) {
 			return Float.valueOf(targetData.floatValue());
-		} 
-		else if(targetObject instanceof Boolean) {
-			if((Boolean) targetObject) {
-				return 1F;
-			} else {
-				return 0F;
-			}
 		}
 		else {
 			throw CatchDataTypeException.returnCouldNotConvertException(Float.class, targetObject);

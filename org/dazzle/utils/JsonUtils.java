@@ -9,7 +9,7 @@ import java.util.Map.Entry;
 
 import org.dazzle.common.exception.BaseException;
 
-import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -40,7 +40,7 @@ public class JsonUtils {
         if(obj == null) {
             throw new BaseException("json_convert_3ghc", "obj参数不能为空");
         }
-        return new Gson().toJson(obj);
+        return new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm:ss").disableHtmlEscaping().create().toJson(obj);
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })

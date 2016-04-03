@@ -55,6 +55,11 @@ public class DateUtils {
 		DateFormat df = null;
 		if(format == null || format.trim().isEmpty()) {
 			df = DATE_FORMAT;
+		} else {
+			df = new SimpleDateFormat(format);
+		}
+		if(df == null) {
+			df = DATE_FORMAT;
 		}
 		try {
 			return df.parse(date);
@@ -70,6 +75,11 @@ public class DateUtils {
 		}
 		DateFormat df = null;
 		if(format == null || format.trim().isEmpty()) {
+			df = DATE_FORMAT;
+		} else {
+			df = new SimpleDateFormat(format);
+		}
+		if(df == null) {
 			df = DATE_FORMAT;
 		}
 		return df.format(date);
