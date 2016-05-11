@@ -6,10 +6,14 @@ import java.util.Map.Entry;
 
 import org.dazzle.common.exception.BaseException;
 
-/** @author hcqt@qq.com */
+/**本软件为开源项目，最新项目发布于github，可提交您的代码到本开源软件，项目网址：<a href="https://github.com/hcqt/dazzle">https://github.com/hcqt/dazzle</a><br />
+ * 本软件内的大多数方法禁止Override，原因是作者提倡组合，而非继承，如果您确实需要用到继承，而又希望用本软件提供的方法名称与参数列表，建议您自行采用适配器设计模式，逐个用同名方法包裹本软件所提供的方法，这样您依然可以使用继承
+ * @see #get(Class, Map, String)
+ * @author hcqt@qq.com*/
 public class MapUtils {
 
-	/** @author hcqt@qq.com */
+	/**@see #get(Class, Map, String)
+	 * @author hcqt@qq.com */
 	public static final <T> T getIgnoreCase(Map<String, T> map, String key) {
 		if(null == map) {
 			return null;
@@ -25,7 +29,8 @@ public class MapUtils {
 		return null;
 	}
 
-	/** @author hcqt@qq.com */
+	/**@see #get(Class, Map, String)
+	 * @author hcqt@qq.com */
 	public static final <T> T getIgnoreCaseTrim(Map<String, T> map, String key) {
 		if(null == map) {
 			return null;
@@ -41,7 +46,11 @@ public class MapUtils {
 		return null;
 	}
 
-	/** @author hcqt@qq.com */
+	/**从map当中获取指定key相应的value，解决多层嵌套map取值的需求，避免了书写重复代码，且健壮性差的问题<br />
+	 * 注意，如果你的map嵌套只有3层，但是你书写的表达式有10层，那么是取不到值的，将返回null
+	 * @param clazz 取值以何种数据类型返回
+	 * @param express 格式：“keyx.keyxx.keyxxx”每一层key之间以“.”分隔
+	 * @author hcqt@qq.com */
 	@SuppressWarnings("unchecked")
 	public static final <T> T get(Class<T> clazz, Map<String, ?> map, String express) {
 		if(map == null || map.isEmpty()) {
@@ -77,12 +86,14 @@ public class MapUtils {
 		return DTU.convert(clazz, map.get(keys[keys.length]));
 	}
 	
-	/** @author hcqt@qq.com */
+	/**@see #get(Class, Map, String)
+	 * @author hcqt@qq.com */
 	public static final <T extends Map<? extends String, ?>> Object put(Map<String, Object> map, String express, Object val) {
 		return put(map, express, val, null);
 	}
 
-	/** @author hcqt@qq.com */
+	/**@see #get(Class, Map, String)
+	 * @author hcqt@qq.com */
 	@SuppressWarnings("unchecked")
 	public static final <T extends Map<? extends String, ?>> Object put(Map<String, Object> map, String express, Object val, Class<T> newMapType) {
 		String[] keys = null;

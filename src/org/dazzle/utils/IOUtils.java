@@ -262,13 +262,13 @@ public class IOUtils {
 	/**复制文件  @see #copyFile(File, File) 
 	 * @author hcqt@qq.com*/
 	public static void copyFile(URI srcPath, File newFile) {
-		copyFile(new File(URLUtils.resolveRealPath(srcPath)), newFile);
+		copyFile(new File(URLUtils.resolve(srcPath)), newFile);
 	}
 
 	/**复制文件  @see #copyFile(File, File) 
 	 * @author hcqt@qq.com*/
 	public static File copyFile(File srcFile, URI newPath) {
-		File ret = new File(URLUtils.resolveRealPath(newPath));
+		File ret = new File(URLUtils.resolve(newPath));
 		copyFile(srcFile, ret);
 		return ret;
 	}
@@ -276,8 +276,8 @@ public class IOUtils {
 	/**复制文件  @see #copyFile(File, File) 
 	 * @author hcqt@qq.com*/
 	public static File copyFile(URI srcPath, URI newPath) {
-		File ret = new File(URLUtils.resolveRealPath(newPath));
-		copyFile(new File(URLUtils.resolveRealPath(srcPath)), ret);
+		File ret = new File(URLUtils.resolve(newPath));
+		copyFile(new File(URLUtils.resolve(srcPath)), ret);
 		return ret;
 	}
 
@@ -370,7 +370,7 @@ public class IOUtils {
 	public static File createFile(URI uri) {
 		File file = null;
 		try {
-			file = new File(URLUtils.resolveRealPath(uri));
+			file = new File(URLUtils.resolve(uri));
 			if(!file.exists()) {
 				Logger.getLogger(IOUtils.class).debug("#####写入文件的路径>>>>>>>>>>>>>>>>>>>>>>" + file);
 				file.createNewFile();
@@ -431,7 +431,7 @@ public class IOUtils {
 	public static File createRandomFile(URI uriPath, String fileSuffix) {
 		try {
 			return createFile(new URI(new StringBuilder()
-					.append(URLUtils.resolveRealPath(uriPath)).append(createDateFile()).append("/")
+					.append(URLUtils.resolve(uriPath)).append(createDateFile()).append("/")
 					.append(System.currentTimeMillis()).append(".")
 					.append(System.nanoTime())
 					.append(Math.random())

@@ -1,28 +1,19 @@
 package org.dazzle.utils;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.Set;
 
 import org.dazzle.common.exception.BaseException;
-import org.dazzle.utils.datatype.Object2BigDecimal;
-import org.dazzle.utils.datatype.Object2Boolean;
-import org.dazzle.utils.datatype.Object2Byte;
-import org.dazzle.utils.datatype.Object2Character;
-import org.dazzle.utils.datatype.Object2Date;
-import org.dazzle.utils.datatype.Object2Double;
-import org.dazzle.utils.datatype.Object2Enum;
-import org.dazzle.utils.datatype.Object2Float;
-import org.dazzle.utils.datatype.Object2Integer;
-import org.dazzle.utils.datatype.Object2Long;
-import org.dazzle.utils.datatype.Object2Short;
-import org.dazzle.utils.datatype.Object2String;
 
 /**<a href="https://github.com/hcqt/dazzle">https://github.com/hcqt/dazzle</a>
  * @see #convert(Class, Object) 
@@ -144,7 +135,7 @@ public class DataTypeUtils {
 				ret = (T) Object2Boolean.convert(srcObj);
 			}
 			else if(Character.class.isAssignableFrom(destClazz)) {
-				ret = Object2Character.convert(srcObj);
+				ret = (T) Object2Character.convert(srcObj);
 			}
 			else if(Collection.class.isAssignableFrom(destClazz)) {
 				return (T) toCollection(destClazz, srcObj);
@@ -167,10 +158,15 @@ public class DataTypeUtils {
 		if(destClazz.isInterface()) {
 			if(List.class.isAssignableFrom(destClazz)) {
 				coll = new ArrayList<>();
-			} else if(Set.class.isAssignableFrom(destClazz)) {
+			} 
+			else if(Set.class.isAssignableFrom(destClazz)) {
 				coll = new HashSet<>();
-			} else {
-				throw new BaseException("dataTypeUtils_8h3kj", "暂不支持向类型{0}转换", destClazz.getName());
+			} 
+			else if(Queue.class.isAssignableFrom(destClazz)) {
+				coll = new LinkedList<>();
+			} 
+			else {
+				throw new BaseException("dataTypeUtils_8h3kj", "暂不支持向集合类型{0}转换", destClazz.getName());
 			}
 		} else {
 			try {
@@ -223,11 +219,51 @@ public class DataTypeUtils {
 		Class<Object[]> arrClazz = Object[].class;
 		Object[] newObj = convertArray(arrClazz, obj);
 		for (Object it : newObj) {
-			if(null == it) {
-				return true;
+			if(null != it) {
+				return false;
 			}
 		}
-		return false;
+		return true;
+	}
+
+	/**与Java自己的toString不同在于，如果是数组，打印数组内容而不再是打印内存地址
+	 * @author hcqt@qq.com */
+	public static final String toStr(Object obj) {
+		if(obj == null) {
+			return null;
+		}
+		if(obj.getClass().isArray()) {
+			if(isPrimitive(obj)) {
+				if (obj instanceof byte[]) {
+					return Arrays.toString((byte[])obj);
+				}
+				else if (obj instanceof short[]) {
+					return Arrays.toString((short[])obj);
+				}
+				else if (obj instanceof int[]) {
+					return Arrays.toString((int[])obj);
+				}
+				else if (obj instanceof long[]) {
+					return Arrays.toString((long[])obj);
+				}
+				else if (obj instanceof double[]) {
+					return Arrays.toString((double[])obj);
+				}
+				else if (obj instanceof float[]) {
+					return Arrays.toString((float[])obj);
+				}
+				else if (obj instanceof char[]) {
+					return Arrays.toString((char[])obj);
+				}
+				else if (obj instanceof boolean[]) {
+					return Arrays.toString((boolean[])obj);
+				}
+				return Arrays.toString((Object[]) obj);
+			} else {
+				return Arrays.deepToString((Object[]) obj);
+			}
+		}
+		return obj.toString();
 	}
 
 	/**判断输入的数据是否为基本数据类型<br />基本数据类型和基本数据类型的数组类型都是做是基本数据类型<br />null视作非基本数据类型
@@ -308,11 +344,7 @@ public class DataTypeUtils {
 		if(isNumber(obj.getClass())) {
 			return true;
 		}
-		// 进行容错，如果不是数字，但依然有可能呢是char，char可以视作数字
-		if(isChar(obj)) {
-			return true;
-		}
-		// 进行容错，如果不是char，但依然有可能是字符串数字，那么用正则表达式判断是否是数字，并兼容正负号
+		// 进行容错，如果数据类型对不上，但依然有可能是字符串数字，那么用正则表达式判断是否是数字，并兼容正负号
 		return obj.toString().matches("^(\\-|\\+)?\\d+(\\.\\d+)?$");
 	}
 
@@ -335,9 +367,6 @@ public class DataTypeUtils {
 		if(Number[].class.isAssignableFrom(clazz)) {
 			return true;
 		}
-		if(isChar(clazz)) {
-			return true;
-		} 
 		if(clazz.isArray()) {
 			return int[].class.isAssignableFrom(clazz)
 					|| long[].class.isAssignableFrom(clazz)
@@ -357,6 +386,39 @@ public class DataTypeUtils {
 					|| char.class.isAssignableFrom(clazz);
 		}
 		return false;
+	}
+
+	/**判断对象是否是日期；<br />
+	 * 进行类型判断以及内容判断；<br />
+	 * 内容判断为判断字符串格式是否是时间格式；<br />
+	 * 字符串判断：<br />日期部分兼容减号、斜杠、点号分隔；<br />时间部分兼容冒号、点号；<br />兼容空格；<br />
+	 * @author hcqt@qq.com */
+	public static final boolean isDate(Object obj) {
+		if(null == obj) {
+			return false;
+		}
+		if(isDate(obj.getClass())) {
+			return true;
+		}
+		// 进行容错，如果数据类型对不上，但依然有可能是字符串日期，那么用正则表达式判断是否日期，日期部分兼容减号、斜杠、点号分隔；时间部分兼容冒号、点号；兼容空格；
+		return obj.toString().matches("^"
+				+ "( *)(\\d{1,4})( *)" //年
+				+ "((-|/|\\.)?)( *)((\\d{1,2})?)( *)" //月
+				+ "((-|/|\\.)?)( *)((\\d{1,2})?)( *)" //日
+				+ "((( +)\\d{1,2})?)( *)" //时
+				+ "((:|\\.)?)( *)((\\d{1,2})?)( *)" //分
+				+ "((:|\\.)?)( *)((\\d{1,2})?)( *)" //秒
+				+ "((:|\\.)?)( *)((\\d{1,3})?)( *)" //毫秒
+				+ "$");
+	}
+
+	/**判断Class是否是日期
+	 * @author hcqt@qq.com */
+	public static final boolean isDate(Class<?> clazz) {
+		if(null == clazz) {
+			return false;
+		}
+		return Date.class.isAssignableFrom(clazz);
 	}
 
 	/**对输入数据进行装箱<br />如果输入数据是基本数据类型则返回装箱数据类型的数据<br />可以对基本数据类型的数组进行装箱<br />
@@ -718,5 +780,580 @@ public class DataTypeUtils {
 	
 	public static final String msg3Code = "dataTypeUtils_0nFck";
 	public static final String msg3 = "无法将数据类型为“{0}”的数据“{1}”转换为类型“{2}”";
+
+	/** @author hcqt@qq.com */
+	static final class DataTypeException extends BaseException {
+
+		private static final long serialVersionUID = 4654330042965245163L;
+
+		/** @author hcqt@qq.com */
+		public DataTypeException() {
+			super();
+		}
+
+		/** @author hcqt@qq.com */
+		public DataTypeException(String code, String message, Object... msgArg) {
+			super(code, message, msgArg);
+		}
+
+		/** @author hcqt@qq.com */
+		public DataTypeException(String code, String message, Throwable cause, Object... msgArg) {
+			super(code, message, cause, msgArg);
+		}
+
+	}
+
+	/** @author hcqt@qq.com */
+	private static final class CatchDataTypeException {
+
+		/**用于抛出无法转换数据类型的异常——输入的数据无法转换为预期的类型<br />该异常总是抛出，使用前你必须确定你是需要抛出此异常
+		 * @param destClazz 预期的类型
+		 * @param srcObj 输入的数据
+		 * @author hcqt@qq.com */
+		private static final <T> DataTypeException returnCouldNotConvertException(Class<T> destClazz, Object srcObj) {
+			return new DataTypeException(
+					"SYS_COMMON_DATA_TYPE_CONVERT_9j2gh", 
+					"类型为{0}的数据“{1}”无法转换为类型“{2}”", 
+					srcObj == null ? "null" : srcObj.getClass(), 
+					srcObj, 
+					destClazz == null ? "null" : destClazz.getName());
+		}
+
+//		/**检查输入数据是否是一个数字，不是则抛出异常
+//		 * @param destClazz 预期的类型
+//		 * @param srcObj 输入的数据
+//		 * @author hcqt@qq.com */
+//		private static final <T> void isNumber(Class<T> destClazz, Object srcObj) {
+//			if(!DataTypeUtils.isNumber(srcObj)) {
+//				throwNotNumberException(destClazz, srcObj);
+//			}
+//		}
+//
+//		/**抛出异常——输入数据不是数字
+//		 * @param destClazz 预期的类型
+//		 * @param srcObj 输入的数据
+//		 * @author hcqt@qq.com */
+//		private static final <T> DataTypeException throwNotNumberException(Class<T> destClazz, Object srcObj) {
+//			return new DataTypeException(
+//					"SYS_COMMON_DATA_TYPE_CONVERT_j8Nt2", 
+//					"类型为{0}的数据“{1}”不是数字，无法转换为类型“{2}”", 
+//					srcObj.getClass(), 
+//					srcObj, 
+//					destClazz.getName());
+//		}
+//
+//		/**如果不是小数，则抛出无法转换数据类型的异常
+//		 * @author hcqt@qq.com */
+//		static final <T> void isDecimal(Class<T> clazz, BigDecimal targetData) {
+//			BigDecimal bigDecimal = targetData.setScale(0, BigDecimal.ROUND_CEILING);
+//			if(targetData.compareTo(bigDecimal) != 0) {
+//				throw new DataTypeException(
+//						"SYS_COMMON_DATA_TYPE_CONVERT_5bhsq", 
+//						ResMsgUtils.resolve("类型为{0}的数据“{1}”不是小数，无法转换为类型“{2}”", targetData.getClass(), targetData, clazz.getName()), 
+//						targetData, 
+//						clazz.getName());
+//			}
+//		}
+
+		/**如果是小数，则抛出无法转换数据类型的异常
+		 * @author hcqt@qq.com */
+		private static final <T> void notDecimal(Class<T> clazz, BigDecimal targetData) {
+			BigDecimal bigDecimal = targetData.setScale(0, BigDecimal.ROUND_CEILING);
+			if(targetData.compareTo(bigDecimal) != 0) {
+				throw new DataTypeException(
+						"SYS_COMMON_DATA_TYPE_CONVERT_5bhsq", 
+						ResMsgUtils.resolve("类型为{0}的数据“{1}”为小数，无法转换为类型“{2}”", targetData.getClass(), targetData, clazz.getName()), 
+						targetData, 
+						clazz.getName());
+			}
+		}
+
+//		/**检查目标数字是否介于最大值与最小值之间，符合指定数据类型的取值范围
+//		 * @author hcqt@qq.com */
+//		static final <T> void isBetweenSpan(final Class<T> clazz, final BigDecimal targetData, final BigDecimal max_value, final BigDecimal min_value) {
+//			if(targetData.compareTo(max_value) == 1 || targetData.compareTo(min_value) == -1) {
+//				throw new DataTypeException(
+//						"SYS_COMMON_DATA_TYPE_CONVERT_n54di", 
+//						ResMsgUtils.resolve("数据“{0}”不在数据类型“{1}”可以容纳的数值范围中", targetData, clazz.getName()), 
+//						targetData, 
+//						clazz.getName());
+//			}
+//		}
+
+		private static final BigDecimal LongMax = BigDecimal.valueOf(Long.MAX_VALUE);
+		private static final BigDecimal LongMin = BigDecimal.valueOf(Long.MIN_VALUE);
+		
+		private static final BigDecimal IntegerMax = BigDecimal.valueOf(Integer.MAX_VALUE);
+		private static final BigDecimal IntegerMin = BigDecimal.valueOf(Integer.MIN_VALUE);
+		
+		private static final BigDecimal ShortMax = BigDecimal.valueOf(Short.MAX_VALUE);
+		private static final BigDecimal ShortMin = BigDecimal.valueOf(Short.MIN_VALUE);
+		
+		private static final BigDecimal ByteMax = BigDecimal.valueOf(Byte.MAX_VALUE);
+		private static final BigDecimal ByteMin = BigDecimal.valueOf(Byte.MIN_VALUE);
+		
+		private static final BigDecimal CharMax = BigDecimal.valueOf(Character.MAX_VALUE);
+		private static final BigDecimal CharMin = BigDecimal.valueOf(Character.MIN_VALUE);
+		
+		private static final BigDecimal DoubleMax = new BigDecimal(Double.toString(Double.MAX_VALUE));// TODO 此数值疑似不准确
+		private static final BigDecimal DoubleMin = new BigDecimal(Double.toString(-Double.MAX_VALUE));// TODO 此数值疑似不准确
+		
+		private static final BigDecimal FloatMax = new BigDecimal(Float.toString(Float.MAX_VALUE));// TODO 此数值疑似不准确
+		private static final BigDecimal FloatMin = new BigDecimal(Float.toString(-Float.MAX_VALUE));// TODO 此数值疑似不准确
+
+		/**@see #isBetweenSpan(Class, Object)
+		 * @author hcqt@qq.com */
+		private static final <T> void isBetweenSpan(Class<T> destClazz, BigDecimal srcObj) {
+			isBetweenSpan(destClazz, (Object) srcObj);
+		}
+
+		/**检查目标数字是否介于最大值与最小值之间，符合指定数据类型的取值范围
+		 * @author hcqt@qq.com */
+		private static final <T> void isBetweenSpan(Class<T> destClazz, Object srcObj) {
+			if(!DataTypeUtils.isNumber(srcObj)) {
+				CatchDataTypeException.returnCouldNotConvertException(destClazz, srcObj);
+			}
+			BigDecimal max = null;
+			BigDecimal min = null;
+			if(Long.class.isAssignableFrom(destClazz)) {
+				max = LongMax;
+				min = LongMin;
+			}
+			else if(Integer.class.isAssignableFrom(destClazz)) {
+				max = IntegerMax;
+				min = IntegerMin;
+			}
+			else if(Double.class.isAssignableFrom(destClazz)) {
+				max = DoubleMax;
+				min = DoubleMin;
+			}
+			else if(Float.class.isAssignableFrom(destClazz)) {
+				max = FloatMax;
+				min = FloatMin;
+			}
+			else if(Short.class.isAssignableFrom(destClazz)) {
+				max = ShortMax;
+				min = ShortMin;
+			}
+			else if(Byte.class.isAssignableFrom(destClazz)) {
+				max = ByteMax;
+				min = ByteMin;
+			}
+			else if(Character.class.isAssignableFrom(destClazz)) {
+				max = CharMax;
+				min = CharMin;
+			}
+			BigDecimal src = new BigDecimal(srcObj.toString());
+			if((src != null && src.compareTo(max) == 1) || (src != null && src.compareTo(min) == -1)) {
+				throw new DataTypeException(
+						"SYS_COMMON_DATA_TYPE_CONVERT_n54di", 
+						"类型为{0}的数值“{1}”不在数据类型“{2}”可以容纳的数值范围内",  
+						srcObj.getClass().getName(), 
+						srcObj, 
+						destClazz.getName());
+			}
+		}
+
+	}
+
+	/** @author hcqt@qq.com */
+	private static final class Object2Byte {
+
+		/** @author hcqt@qq.com */
+		private static final <T> Byte convert(Object targetObject) {
+			if(targetObject.getClass().isEnum()) {
+				return convert(((Enum<?>)targetObject).ordinal());
+			}
+			else if(isNumber(targetObject)) {
+				BigDecimal targetData = new BigDecimal(targetObject.toString());
+				CatchDataTypeException.notDecimal(Byte.class, targetData);
+				CatchDataTypeException.isBetweenSpan(Byte.class, targetData);
+				if(targetObject instanceof String
+						|| targetObject instanceof Long
+						|| targetObject instanceof Byte
+						|| targetObject instanceof Short
+						|| targetObject instanceof Integer
+						|| targetObject instanceof BigDecimal
+						|| targetObject instanceof Float
+						|| targetObject instanceof Double) {
+					return Byte.valueOf(targetData.byteValue());
+				}
+				else {
+					throw CatchDataTypeException.returnCouldNotConvertException(Byte.class, targetObject);
+				}
+			} 
+			else if(isChar(targetObject)) {
+				return Byte.valueOf(Integer.valueOf((int) targetObject.toString().charAt(0)).byteValue());
+			}
+			else if(isDate(targetObject)) {
+				Date d = DataTypeUtils.convert(Date.class, targetObject);
+				return convert(d.getTime());
+			}
+			throw CatchDataTypeException.returnCouldNotConvertException(Byte.class, targetObject);
+		}
+
+	}
+
+	/** @author hcqt@qq.com */
+	private static final class Object2Short {
+
+		/** @author hcqt@qq.com */
+		private static final Short convert(final Object targetObject) {
+			if(targetObject.getClass().isEnum()) {
+				return convert(((Enum<?>)targetObject).ordinal());
+			}
+			else if(isNumber(targetObject)) {
+				BigDecimal targetData = new BigDecimal(targetObject.toString());
+				CatchDataTypeException.notDecimal(Short.class, targetData);
+				CatchDataTypeException.isBetweenSpan(Short.class, targetData);
+				if(targetObject instanceof String
+						|| targetObject instanceof Long
+						|| targetObject instanceof Byte
+						|| targetObject instanceof Short
+						|| targetObject instanceof Integer
+						|| targetObject instanceof BigDecimal
+						|| targetObject instanceof Float
+						|| targetObject instanceof Double
+						) {
+					return Short.valueOf(targetData.shortValue());
+				}
+				else {
+					throw CatchDataTypeException.returnCouldNotConvertException(Short.class, targetObject);
+				}
+			} 
+			else if(isChar(targetObject)) {
+				return Short.valueOf(Integer.valueOf((int) targetObject.toString().charAt(0)).shortValue());
+			}
+			else if(isDate(targetObject)) {
+				Date d = DataTypeUtils.convert(Date.class, targetObject);
+				return convert(d.getTime());
+			}
+			throw CatchDataTypeException.returnCouldNotConvertException(Short.class, targetObject);
+		}
+
+	}
+
+	/** @author hcqt@qq.com */
+	private static final class Object2Integer {
+
+		/** @author hcqt@qq.com */
+		private static final Integer convert(final Object targetObject) {
+			if(targetObject.getClass().isEnum()) {
+				return ((Enum<?>)targetObject).ordinal();
+			}
+			else if(isNumber(targetObject)) {
+				BigDecimal targetData = new BigDecimal(targetObject.toString());
+				CatchDataTypeException.notDecimal(Integer.class, targetData);
+				CatchDataTypeException.isBetweenSpan(Integer.class, targetData);
+				if(targetObject instanceof String
+						|| targetObject instanceof Long
+						|| targetObject instanceof Byte
+						|| targetObject instanceof Short
+						|| targetObject instanceof Integer
+						|| targetObject instanceof BigDecimal
+						|| targetObject instanceof Float
+						|| targetObject instanceof Double) {
+					return Integer.valueOf(targetData.intValue());
+				}
+				else {
+					throw CatchDataTypeException.returnCouldNotConvertException(Integer.class, targetObject);
+				}
+			} 
+			else if(isChar(targetObject)) {
+				return Integer.valueOf((int) targetObject.toString().charAt(0));
+			}
+			else if(isDate(targetObject)) {
+				Date d = DataTypeUtils.convert(Date.class, targetObject);
+				return convert(d.getTime());
+			}
+			throw CatchDataTypeException.returnCouldNotConvertException(Integer.class, targetObject);
+		}
+
+	}
+
+	/** @author hcqt@qq.com */
+	private static final class Object2Long {
+
+		/** @author hcqt@qq.com */
+		private static final Long convert(final Object targetObject) {
+			if(targetObject.getClass().isEnum()) {
+				return Long.valueOf(((Enum<?>)targetObject).ordinal());
+			}
+			else if(isNumber(targetObject)) {
+				BigDecimal targetData = new BigDecimal(targetObject.toString());
+				CatchDataTypeException.notDecimal(Long.class, targetData);
+				CatchDataTypeException.isBetweenSpan(Long.class, targetData);
+				if(targetObject instanceof String
+						|| targetObject instanceof Long
+						|| targetObject instanceof Byte
+						|| targetObject instanceof Short
+						|| targetObject instanceof Integer
+						|| targetObject instanceof BigDecimal
+						|| targetObject instanceof Float
+						|| targetObject instanceof Double
+						) {
+					return Long.valueOf(targetData.longValue());
+				}
+				else {
+					throw CatchDataTypeException.returnCouldNotConvertException(Long.class, targetObject);
+				}
+			} 
+			else if(isChar(targetObject)) {
+				return Long.valueOf((int) targetObject.toString().charAt(0));
+			}
+			else if(isDate(targetObject)) {
+				Date d = DataTypeUtils.convert(Date.class, targetObject);
+				return Long.valueOf(d.getTime());
+			}
+			throw CatchDataTypeException.returnCouldNotConvertException(Long.class, targetObject);
+		}
+
+	}
+
+	/** @author hcqt@qq.com */
+	private static final class Object2Double {
+
+		/** @author hcqt@qq.com */
+		private static final Double convert(final Object targetObject) {
+			if(targetObject.getClass().isEnum()) {
+				return Double.valueOf(((Enum<?>)targetObject).ordinal());
+			}
+			else if(isNumber(targetObject)) {
+				BigDecimal targetData = new BigDecimal((String)targetObject);
+				CatchDataTypeException.isBetweenSpan(Double.class, targetData);
+				if(targetObject instanceof String
+						|| targetObject instanceof Long
+						|| targetObject instanceof Byte
+						|| targetObject instanceof Short
+						|| targetObject instanceof Integer
+						|| targetObject instanceof BigDecimal
+						|| targetObject instanceof Float
+						|| targetObject instanceof Double) {
+					return Double.valueOf(targetData.doubleValue());
+				}
+				else {
+					throw CatchDataTypeException.returnCouldNotConvertException(Double.class, targetObject);
+				}
+			} 
+			else if(isChar(targetObject)) {
+				return Double.valueOf((int) targetObject.toString().charAt(0));
+			}
+			else if(isDate(targetObject)) {
+				Date d = DataTypeUtils.convert(Date.class, targetObject);
+				return convert(d.getTime());
+			}
+			throw CatchDataTypeException.returnCouldNotConvertException(Double.class, targetObject);
+		}
+
+	}
+
+	/** @author hcqt@qq.com */
+	private static final class Object2Float {
+
+		/** @author hcqt@qq.com */
+		private static final Float convert(final Object targetObject) {
+			if(targetObject.getClass().isEnum()) {
+				return convert(((Enum<?>)targetObject).ordinal());
+			}
+			else if(isNumber(targetObject)) {
+				BigDecimal targetData = new BigDecimal(targetObject.toString());
+				CatchDataTypeException.isBetweenSpan(Float.class, targetData);
+				if(targetObject instanceof String
+						|| targetObject instanceof Long
+						|| targetObject instanceof Byte
+						|| targetObject instanceof Short
+						|| targetObject instanceof Integer
+						|| targetObject instanceof BigDecimal
+						|| targetObject instanceof Float
+						|| targetObject instanceof Double) {
+					return Float.valueOf(targetData.floatValue());
+				}
+				else {
+					throw CatchDataTypeException.returnCouldNotConvertException(Float.class, targetObject);
+				}
+			} 
+			else if(isChar(targetObject)) {
+				return Float.valueOf((int) targetObject.toString().charAt(0));
+			}
+			else if(isDate(targetObject)) {
+				Date d = DataTypeUtils.convert(Date.class, targetObject);
+				return convert(d.getTime());
+			}
+			throw CatchDataTypeException.returnCouldNotConvertException(Float.class, targetObject);
+		}
+
+	}
+
+	/** @author hcqt@qq.com */
+	private static final class Object2BigDecimal {
+
+		/** @author hcqt@qq.com */
+		private static final BigDecimal convert(final Object targetObject) {
+			if(targetObject.getClass().isEnum()) {
+				return BigDecimal.valueOf(((Enum<?>)targetObject).ordinal());
+			}
+			else if(isNumber(targetObject)) {
+				try {
+					return new BigDecimal(targetObject.toString());
+				} catch(Exception e) {
+					throw CatchDataTypeException.returnCouldNotConvertException(BigDecimal.class, targetObject);
+				}
+			} 
+			else if(isChar(targetObject)) {
+				return BigDecimal.valueOf((int) targetObject.toString().charAt(0));
+			}
+			else if(isDate(targetObject)) {
+				Date d = DataTypeUtils.convert(Date.class, targetObject);
+				return BigDecimal.valueOf(d.getTime());
+			}
+			throw CatchDataTypeException.returnCouldNotConvertException(BigDecimal.class, targetObject);
+		}
+
+	}
+
+	/** @author hcqt@qq.com */
+	private static final class Object2Character {
+
+		/** @author hcqt@qq.com */
+		private static final Character convert(final Object targetObject) {
+			if(isChar(targetObject)) {
+				return Character.valueOf(targetObject.toString().charAt(0));
+			}
+			else if(isNumber(targetObject)) {
+				BigDecimal b = DataTypeUtils.convert(BigDecimal.class, targetObject);
+				CatchDataTypeException.notDecimal(Character.class, b);
+				CatchDataTypeException.isBetweenSpan(Character.class, b);
+				return Character.valueOf((char) b.intValue());
+			} 
+			else if(targetObject.getClass().isEnum()) {
+				Integer i = DataTypeUtils.convert(Integer.class, targetObject);
+				return convert(i);
+			}
+			else if(isDate(targetObject)) {
+				Date d = DataTypeUtils.convert(Date.class, targetObject);
+				return convert(d.getTime());
+			}
+			else if(targetObject instanceof String) {
+				String s = (String) targetObject;
+				if(s.length() != 1) {
+					throw CatchDataTypeException.returnCouldNotConvertException(Character.class, targetObject);
+				}
+				return Character.valueOf((s).charAt(0));
+			}
+			throw CatchDataTypeException.returnCouldNotConvertException(Character.class, targetObject);
+		}
+		
+	}
+
+	/** @author hcqt@qq.com */
+	private static final class Object2Boolean {
+
+		/** @author hcqt@qq.com */
+		private static final Boolean convert(final Object targetObject) {
+			if(targetObject instanceof String) {
+				return Boolean.valueOf((String) targetObject);// TODO 异常处理
+			}
+			else if(targetObject instanceof Boolean) {
+				return (Boolean) targetObject;
+			}
+			throw CatchDataTypeException.returnCouldNotConvertException(Boolean.class, targetObject);
+		}
+	}
+
+	/** @author hcqt@qq.com */
+	private static final class Object2Enum {
+
+		/** @author hcqt@qq.com */
+		private static final <T> T convert(final Class<T> clazz, final Object targetObject) {
+			T[] _elements = clazz.getEnumConstants();
+			if(targetObject instanceof String) {
+				for (T _enumElement : _elements) {
+					try {
+						Method method = _enumElement.getClass().getMethod("name");
+						Object enumName = null;
+						enumName = method.invoke(_enumElement);
+						if(null == enumName) {
+							continue;
+						}
+						if(enumName.toString().equals(targetObject.toString())) {
+							return _enumElement;
+						}
+					} catch (Exception e) { }
+				}
+			} 
+			// 尝试输入值是否可以转换为整型，如果可以，那么以枚举底层整型下标进行转换
+			try {
+				Integer index = DataTypeUtils.convert(Integer.class, targetObject);
+				for (T _enumElement : _elements) {
+					try {
+						Method method = _enumElement.getClass().getMethod("ordinal");
+						Object enumOrdinal = null;
+						enumOrdinal = method.invoke(_enumElement);
+						if(null == enumOrdinal) {
+							continue;
+						}
+						if(enumOrdinal.toString().equals(index.toString())) {
+							return _enumElement;
+						}
+					} catch (Exception e) { }
+				}
+			} catch (BaseException e) { }
+			throw new DataTypeException(
+					"SER_COMMON_META_DATA_54hdQ", 
+					ResMsgUtils.resolve("无法把数据类型为“{0}”的数据“{1}”转换到枚举类型“{2}”", targetObject.getClass().getName(), targetObject, clazz), 
+					targetObject.getClass().getName(), 
+					targetObject, 
+					clazz.getName());
+		}
+
+	}
+
+	/** @author hcqt@qq.com */
+	private static final class Object2String {
+
+		/** @author hcqt@qq.com */
+		private static final String convert(final Object targetObject) {
+			String ret = null;
+			if(null == targetObject) {
+				ret = null;
+			} 
+			else if(isDate(targetObject)) {
+				Date d = Object2Date.convert(targetObject);
+				ret = DU.format(d, DEF_DATE_FMT);
+			}
+			if(null == ret) {
+				ret = targetObject.toString();
+			}
+			return ret;
+		}
+
+		private static final String DEF_DATE_FMT = "yyyy-MM-dd HH:mm:ss"; 
+
+	}
+
+	/** @author hcqt@qq.com */
+	private static final class Object2Date {
+
+		/** @author hcqt@qq.com */
+		private static final Date convert(final Object targetObject) {
+			if(isDate(targetObject)) {
+				if(targetObject instanceof Date) {
+					return (Date) targetObject;
+				}
+				else if(targetObject instanceof String) {
+					try { return DU.parse((String) targetObject, datePattern1); } 
+					catch (BaseException e) { }
+				}
+			}
+			else if(isNumber(targetObject)) {
+				try {  return new Date(DataTypeUtils.convert(Long.class, targetObject)); } 
+				catch (BaseException e) { }
+			}
+			throw CatchDataTypeException.returnCouldNotConvertException(Date.class, targetObject);
+		}
+
+		private static final String datePattern1 = "yyyy-MM-dd HH:mm:ss";
+
+	}
 
 }
