@@ -1,8 +1,5 @@
 package org.dazzle.utils;
 
-import java.math.BigDecimal;
-import java.sql.Blob;
-import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.DataTruncation;
 import java.sql.PreparedStatement;
@@ -13,12 +10,11 @@ import java.sql.SQLNonTransientConnectionException;
 import java.sql.SQLSyntaxErrorException;
 import java.sql.SQLTransactionRollbackException;
 import java.sql.Statement;
-import java.sql.Time;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -100,6 +96,17 @@ public class SpringDaoUtils {
 //		String[] fields = DTU.cvt(String[].class, data.keySet().toArray());
 //		return insert(jdbcOperations, sql, fields, data);
 //	}
+	
+	/**@author hcqt@qq.com*/
+	public static final Long insert(
+			JdbcOperations jdbcOperations, 
+			String tableName, 
+			Map<String, Object> data) {
+		StringBuilder sql = new StringBuilder();
+		List<Object> params = new ArrayList<>();
+		createInsertSql(null, null, tableName, data, sql, params);
+		return insert(jdbcOperations, sql.toString(), params);
+	}
 
 	/**@author hcqt@qq.com*/
 	public static final Long insert(
@@ -110,7 +117,7 @@ public class SpringDaoUtils {
 			Map<String, Object> data) {
 		StringBuilder sql = new StringBuilder();
 		List<Object> params = new ArrayList<>();
-		insertSql(fieldsMapping, tablesMapping, tableName, data, sql, params);
+		createInsertSql(fieldsMapping, tablesMapping, tableName, data, sql, params);
 		return insert(jdbcOperations, sql.toString(), params);
 	}
 
@@ -140,6 +147,18 @@ public class SpringDaoUtils {
 		}
 		return null;
 	}
+	
+	/**@author hcqt@qq.com*/
+	public static final void update(
+			JdbcOperations jdbcOperations, 
+			String tableName, 
+			Object setData, 
+			Object where) {
+		StringBuilder sql = new StringBuilder();
+		List<Object> params = new ArrayList<>();
+		createUpdateSql(null, null, tableName, setData, where, sql, params);
+		update(jdbcOperations, sql.toString(), params);
+	}
 
 	/**@author hcqt@qq.com*/
 	public static final void update(
@@ -151,7 +170,7 @@ public class SpringDaoUtils {
 			Object where) {
 		StringBuilder sql = new StringBuilder();
 		List<Object> params = new ArrayList<>();
-		updateSql(fieldsMapping, tablesMapping, tableName, setData, where, sql, params);
+		createUpdateSql(fieldsMapping, tablesMapping, tableName, setData, where, sql, params);
 		update(jdbcOperations, sql.toString(), params);
 	}
 //	public static final void update(
@@ -226,31 +245,40 @@ public class SpringDaoUtils {
 			}
 		}
 	}
+	
+	/**@author hcqt@qq.com*/
+	public static final void delete(
+			JdbcOperations jdbcOperations, 
+			String tableName, 
+			Object where) {
+		delete(jdbcOperations, null, tableName, where);
+	}
 
 	/**@author hcqt@qq.com*/
 	public static final void delete(
 			JdbcOperations jdbcOperations, 
 			Map<String, String> fieldsMapping, 
 			String tableName, 
-			List<Map<String, Object>> where) {
-		StringBuilder sql = deleteSql(fieldsMapping, tableName, where);
-		delete(jdbcOperations, sql.toString(), where);
+			Object where) {
+		StringBuilder sql = new StringBuilder();
+		List<Object> params = new ArrayList<>();
+		createDeleteSql(fieldsMapping, tableName, where, sql, params);
+		delete(jdbcOperations, sql.toString(), params);
 	}
 
 	/**@author hcqt@qq.com*/
 	public static final void delete(
 			JdbcOperations jdbcOperations, 
 			final String sql, 
-			final List<Map<String, Object>> where) {
+			final List<Object> params) {
+		Logger.getLogger("org.dazzle.util").debug("sql ==>" + sql.toString());
+		Logger.getLogger("org.dazzle.util").debug("args==>" + params);
 		try {
 			jdbcOperations.update(new PreparedStatementCreator() {
 				@Override
 				public PreparedStatement createPreparedStatement(Connection conn) throws SQLException {
 					PreparedStatement ps = conn.prepareStatement(sql);
-					List<String> fields = new ArrayList<>();
-					Map<String, Object> data = new HashMap<>();
-					renameDuplicateField(fields, data, where);
-					setData(ps, DTU.cvt(String[].class, fields.toArray()), data);
+					setParams(ps, params);
 					return ps;
 				}
 			});
@@ -258,6 +286,71 @@ public class SpringDaoUtils {
 			catchException(e);
 		}
 	}
+	
+	/**@author hcqt@qq.com*/
+	public static final Map<String, Object> find(
+			JdbcOperations jdbcOperations, 
+			Object selectFields, 
+			String fromTable, 
+			Object where, 
+			String groupByHaving, 
+			String orderBy,
+			Integer startNum, 
+			Integer rowNum, 
+			Boolean autoCount, 
+			Boolean needResultFieldFullName) {
+		Boolean needResultSequence = false;
+		List<Map<String, Object>> resultMappping = null;
+		Map<String, String> tablesMapping = null;
+		Map<String, String> fieldsMapping = null;
+		return find(
+				jdbcOperations, 
+				fieldsMapping, 
+				tablesMapping, 
+				resultMappping, 
+				selectFields, 
+				fromTable, 
+				where, 
+				groupByHaving, 
+				orderBy,
+				startNum, 
+				rowNum, 
+				autoCount, 
+				needResultSequence, 
+				needResultFieldFullName);
+	}
+
+	/**@author hcqt@qq.com*/
+	public static final Map<String, Object> find(
+			JdbcOperations jdbcOperations, 
+			Object selectFields, 
+			String fromTable, 
+			Object where, 
+			String groupByHaving, 
+			String orderBy,
+			Integer startNum, 
+			Integer rowNum, 
+			Boolean autoCount) {
+		Boolean needResultSequence = false;
+		List<Map<String, Object>> resultMappping = null;
+		Map<String, String> tablesMapping = null;
+		Map<String, String> fieldsMapping = null;
+		return find(
+				jdbcOperations, 
+				fieldsMapping, 
+				tablesMapping, 
+				resultMappping, 
+				selectFields, 
+				fromTable, 
+				where, 
+				groupByHaving, 
+				orderBy,
+				startNum, 
+				rowNum, 
+				autoCount, 
+				needResultSequence, 
+				false);
+	}
 
 	/**@author hcqt@qq.com*/
 	public static final Map<String, Object> find(
@@ -274,36 +367,66 @@ public class SpringDaoUtils {
 			Integer rowNum, 
 			Boolean autoCount, 
 			Boolean needResultSequence) {
-		return find(jdbcOperations, fieldsMapping, tablesMapping, resultMapppingTranslate(resultMappping), selectFields, fromTable, where, groupByHaving, orderBy, startNum, rowNum, autoCount, needResultSequence);
+		List<Map<String, Object>> _resultMappping = resultMapppingTranslate(resultMappping);
+		return find(
+				jdbcOperations, 
+				fieldsMapping, 
+				tablesMapping, 
+				_resultMappping, 
+				selectFields, 
+				fromTable, 
+				where, 
+				groupByHaving, 
+				orderBy,
+				startNum, 
+				rowNum, 
+				autoCount, 
+				needResultSequence, 
+				false);
 	}
 
 	/**@author hcqt@qq.com*/
+	@SuppressWarnings("unchecked")
 	public static final Map<String, Object> find(
-			JdbcOperations jdbcOperations, 
-			Map<String, String> fieldsMapping, 
-			Map<String, String> tablesMapping, 
-			Map<String, String> resultMappping, 
 			Map<String, Object> sqlArgs) {
-		return find(jdbcOperations, fieldsMapping, tablesMapping, resultMapppingTranslate(resultMappping), sqlArgs);
-	}
-	
-	/**@author hcqt@qq.com*/
-	public static final Map<String, Object> find(
-			JdbcOperations jdbcOperations, 
-			Map<String, String> fieldsMapping, 
-			Map<String, String> tablesMapping, 
-			List<Map<String, Object>> resultMappping, 
-			Map<String, Object> sqlArgs) {
+		JdbcOperations jdbcOperations = DTU.cvt(JdbcOperations.class, sqlArgs.get("jdbcOperations"));
+		Map<String, String> fieldsMapping = DTU.cvt(Map.class, sqlArgs.get("fieldsMapping"));
+		Map<String, String> tablesMapping = DTU.cvt(Map.class, sqlArgs.get("tablesMapping"));
+		List<Map<String, Object>> resultMappping = null;
+		try {
+			resultMappping = DTU.cvt(List.class, sqlArgs.get("resultMappping"));
+		} catch (BaseException e) {
+			try {
+				resultMappping = resultMapppingTranslate(DTU.cvt(Map.class, sqlArgs.get("resultMappping")));
+			} catch (BaseException e1) {
+				throw new BaseException("spring_dao_73nb3", "查询参数resultMappping必须是map或者list", e1);
+			}
+		}
 		Object selectFields = DTU.cvt(Object.class, sqlArgs.get("selectFields"));
-		Boolean needResultSequence = DTU.cvt(Boolean.class, sqlArgs.get("needResultSequence"));
-		Boolean autoCount = DTU.cvt(Boolean.class, sqlArgs.get("autoCount"));
 		Integer rowNum = DTU.cvt(Integer.class, sqlArgs.get("rowNum"));
 		Integer startNum = DTU.cvt(Integer.class, sqlArgs.get("startNum"));
 		String orderBy = DTU.cvt(String.class, sqlArgs.get("orderBy"));
 		String groupByHaving = DTU.cvt(String.class, sqlArgs.get("groupByHaving"));
 		Object where = DTU.cvt(Object.class, sqlArgs.get("where"));
 		String fromTable = DTU.cvt(String.class, sqlArgs.get("fromTable"));
-		return find(jdbcOperations, fieldsMapping, tablesMapping, resultMappping, selectFields, fromTable, where, groupByHaving, orderBy, startNum, rowNum, autoCount, needResultSequence);
+		Boolean needResultSequence = DTU.cvt(Boolean.class, sqlArgs.get("needResultSequence"));
+		Boolean autoCount = DTU.cvt(Boolean.class, sqlArgs.get("autoCount"));
+		Boolean needResultFieldFullName = DTU.cvt(Boolean.class, sqlArgs.get("needResultFieldFullName"));
+		return find(
+				jdbcOperations, 
+				fieldsMapping, 
+				tablesMapping, 
+				resultMappping, 
+				selectFields, 
+				fromTable, 
+				where, 
+				groupByHaving, 
+				orderBy,
+				startNum, 
+				rowNum, 
+				autoCount, 
+				needResultSequence, 
+				needResultFieldFullName);
 	}
 
 	/**@author hcqt@qq.com*/
@@ -320,14 +443,16 @@ public class SpringDaoUtils {
 			Integer startNum, 
 			Integer rowNum, 
 			Boolean autoCount, 
-			Boolean needResultSequence) {
+			Boolean needResultSequence, 
+			Boolean needResultFieldFullName) {
 		List<Object> params = new ArrayList<>();
 		StringBuilder sql = new StringBuilder();
-		findSql(fieldsMapping, tablesMapping, selectFields, fromTable, where, groupByHaving, orderBy, startNum, rowNum, sql, params);
-		List<Map<String, Object>> result = find(jdbcOperations, resultMappping, needResultSequence, sql.toString(), params);
+		createFindSqlStrAndParam(fieldsMapping, tablesMapping, selectFields, fromTable, where, groupByHaving, orderBy, startNum, rowNum, sql, params);
+		List<Map<String, Object>> result = find(jdbcOperations, resultMappping, needResultSequence, needResultFieldFullName, sql.toString(), params);
 		Map<String, Object> ret = new LinkedHashMap<>();
+		ret.put("result", result);
 		if(null != autoCount && autoCount) {
-			ret.put("countNum", findAutoCount(jdbcOperations, needResultSequence, sql.toString(), params));
+			ret.put("countNum", findAutoCount(jdbcOperations, sql.toString(), params));
 		}
 		ret.put("fieldsMapping", fieldsMapping);
 		ret.put("tablesMapping", tablesMapping);
@@ -343,7 +468,6 @@ public class SpringDaoUtils {
 		ret.put("needResultSequence", needResultSequence);
 		ret.put("sql", sql.toString());
 		ret.put("sqlParams", params);
-		ret.put("result", result);
 		pageCalc(ret);
 		return ret;
 	}
@@ -351,15 +475,41 @@ public class SpringDaoUtils {
 	/**@author hcqt@qq.com*/
 	public static final List<Map<String, Object>> find(
 			JdbcOperations jdbcOperations, 
-			Map<String, String> resultMappping, 
-			Boolean needResultSequence, 
 			String sql, 
 			List<Object> params) {
-		return find(jdbcOperations, resultMapppingTranslate(resultMappping), needResultSequence, sql, params);
+		List<Map<String, Object>> resultMappping = null;
+		Boolean needResultSequence = null;
+		Boolean needResultFieldFullName = null;
+		return find(
+				jdbcOperations, 
+				resultMappping, 
+				needResultSequence, 
+				needResultFieldFullName, 
+				sql, 
+				params);
 	}
 
 	/**@author hcqt@qq.com*/
-	public static final void findSql(
+	public static final <T> List<Map<String, Object>> find(
+			JdbcOperations jdbcOperations, 
+			String sql, 
+			@SuppressWarnings("unchecked") T... params) {
+		List<Map<String, Object>> resultMappping = null;
+		Boolean needResultSequence = null;
+		Boolean needResultFieldFullName = null;
+		@SuppressWarnings("unchecked")
+		List<Object> _params = DTU.cvt(List.class, params);
+		return find(
+				jdbcOperations, 
+				resultMappping, 
+				needResultSequence, 
+				needResultFieldFullName, 
+				sql, 
+				_params);
+	}
+
+	/**@author hcqt@qq.com*/
+	public static final void createFindSqlStrAndParam(
 			Map<String, String> fieldsMapping, 
 			Map<String, String> tablesMapping, 
 			Object selectFields, 
@@ -381,15 +531,15 @@ public class SpringDaoUtils {
 		sql.append("SELECT");
 		fieldsSql(sql, fieldsMapping, selectFields);
 		sql.append(" FROM");
-		tableSql(sql, tablesMapping, fieldsMapping, fromTable);
-		whereSql(sql, where, fieldsMapping, params);
-		groupBySql(sql, groupByHaving, fieldsMapping);
-		orderBySql(sql, orderBy, fieldsMapping);
-		limitSql(sql, startNum, rowNum, params);
+		createTableSql(sql, tablesMapping, fieldsMapping, fromTable);
+		createWhereSql(sql, where, fieldsMapping, params);
+		createGroupBySql(sql, groupByHaving, fieldsMapping);
+		createOrderBySql(sql, orderBy, fieldsMapping);
+		createLimitSql(sql, startNum, rowNum, params);
 	}
 
 	/**@author hcqt@qq.com*/
-	public static final String findSql(
+	public static final String createfindSqlStr(
 			Map<String, String> fieldsMapping, 
 			Map<String, String> tablesMapping, 
 			Object selectFields, 
@@ -402,12 +552,12 @@ public class SpringDaoUtils {
 			) {
 		StringBuilder sql = new StringBuilder();
 		List<Object> params = new ArrayList<>();
-		findSql(fieldsMapping, tablesMapping, selectFields, fromTable, where, groupByHaving, orderBy, startNum, rowNum, sql, params);
+		createFindSqlStrAndParam(fieldsMapping, tablesMapping, selectFields, fromTable, where, groupByHaving, orderBy, startNum, rowNum, sql, params);
 		return sql.toString();
 	}
 
 	/**@author hcqt@qq.com*/
-	public static final List<Object> findSqlParams(
+	public static final List<Object> createFindSqlParams(
 			Map<String, String> fieldsMapping, 
 			Map<String, String> tablesMapping, 
 			Object selectFields, 
@@ -419,22 +569,42 @@ public class SpringDaoUtils {
 			Integer rowNum) {
 		StringBuilder sql = new StringBuilder();
 		List<Object> params = new ArrayList<>();
-		sql.append("SELECT");
-		fieldsSql(sql, fieldsMapping, selectFields);
-		sql.append(" FROM");
-		tableSql(sql, tablesMapping, fieldsMapping, fromTable);
-		whereSql(sql, where, fieldsMapping, params);
-		groupBySql(sql, groupByHaving, fieldsMapping);
-		orderBySql(sql, orderBy, fieldsMapping);
-		limitSql(sql, startNum, rowNum, params);
+		createFindSqlStrAndParam(fieldsMapping, tablesMapping, selectFields, fromTable, where, groupByHaving, orderBy, startNum, rowNum, sql, params);
 		return params;
 	}
 
+//	/**@author hcqt@qq.com*/
+//	public static final List<Map<String, Object>> find(
+//			JdbcOperations jdbcOperations, 
+//			final List<Map<String, Object>> resultMappping, 
+//			final Boolean needResultSequence, 
+//			final String sql, 
+//			final List<Object> params) {
+//		try {
+//			Logger.getLogger("org.dazzle.util").debug("sql ==>" + sql.toString());
+//			Logger.getLogger("org.dazzle.util").debug("args==>" + params);
+//			List<Map<String, Object>> result = jdbcOperations.query(
+//					new PreparedStatementCreator() {
+//						@Override
+//						public PreparedStatement createPreparedStatement(Connection conn) throws SQLException {
+//							PreparedStatement ps = conn.prepareStatement(sql);
+//							setParams(ps, params);
+//							return ps;
+//						}
+//					}, newRowMapper(resultMappping, needResultSequence, false, sql, params));
+//			return result;
+//		} catch (RuntimeException e) {
+//			catchException(e);
+//			return null;
+//		}
+//	}
+	
 	/**@author hcqt@qq.com*/
 	public static final List<Map<String, Object>> find(
 			JdbcOperations jdbcOperations, 
-			final List<Map<String, Object>> resultMappping, 
-			final Boolean needResultSequence, 
+			List<Map<String, Object>> resultMappping, 
+			Boolean needResultSequence, 
+			Boolean needResultFieldFullName, 
 			final String sql, 
 			final List<Object> params) {
 		try {
@@ -448,47 +618,91 @@ public class SpringDaoUtils {
 							setParams(ps, params);
 							return ps;
 						}
-					}, new RowMapper<Map<String, Object>>() {
-						@Override
-						public Map<String, Object> mapRow(ResultSet rs, int rn) throws SQLException {
-							Map<String, Object> ret;
-							if(null != needResultSequence && needResultSequence) {
-								ret = new LinkedHashMap<>();
-							} else {
-								ret = new HashMap<>();
-							}
-							Class<?> type = null;
-							String field = null;
-							String tbField = null;
-							for (Map<String, Object> item : resultMappping) {
-								if(null == item) {
-									continue;
-								}
-								field = DTU.cvt(String.class, item.get("field"));
-								if(null == field) {
-									continue;
-								}
-								tbField = DTU.cvt(String.class, item.get("tbField"));
-								if(null == tbField) {
-									continue;
-								}
-								type = DTU.cvt(Class.class, item.get("type"));
-								if(null == type) {
-									type = Object.class;
-								}
-								try {
-									ret.put(field, DTU.cvt(type, rs.getObject(tbField)));
-								} catch (SQLException e) {
-									ret.put(field, null);
-								}
-							}
-							return ret;
-						}
-					});
+					}, newRowMapper(resultMappping, needResultSequence, needResultFieldFullName, sql, params));
 			return result;
 		} catch (RuntimeException e) {
 			catchException(e);
 			return null;
+		}
+	}
+
+	private static final RowMapper<Map<String, Object>> newRowMapper(
+			final List<Map<String, Object>> resultMappping, 
+			final Boolean needResultSequence, 
+			final Boolean needResultFieldFullName, 
+			final String sql, 
+			final List<Object> params) {
+		return new RowMapper<Map<String, Object>>() {
+			@Override
+			public Map<String, Object> mapRow(ResultSet rs, int rn) throws SQLException {
+				Map<String, Object> ret;
+				if(null != needResultSequence && needResultSequence) {
+					ret = new LinkedHashMap<>();
+				} else {
+					ret = new HashMap<>();
+				}
+				List<Map<String, Object>> _resultMappping = resultMappping;
+				if(_resultMappping == null) {
+					_resultMappping = new ArrayList<>();
+				}
+				if(_resultMappping.isEmpty()) {
+					autoResultMappping(rs, ret, _resultMappping, needResultFieldFullName);
+				}								
+				putData(rs, ret, _resultMappping);
+				return ret;
+			}
+		};
+	}
+
+	private static final void autoResultMappping(
+			ResultSet rs, 
+			Map<String, Object> ret, 
+			List<Map<String, Object>> resultMappping, 
+			Boolean needResultFieldFullName) throws SQLException {
+		if(needResultFieldFullName == null) {
+			needResultFieldFullName = false;
+		}
+		for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+			Map<String, Object> columnInfo = new HashMap<>();
+			if(needResultFieldFullName) {
+				columnInfo.put("field", rs.getMetaData().getTableName(i) + "." + rs.getMetaData().getColumnLabel(i));
+			} else {
+				columnInfo.put("field", rs.getMetaData().getColumnLabel(i));
+			}
+			if(columnInfo.get("field") == null) {
+				columnInfo.put("field", rs.getMetaData().getColumnName(i));
+			}
+			columnInfo.put("tbField", columnInfo.get("field"));
+			columnInfo.put("type", Object.class);
+			resultMappping.add(columnInfo);
+		}
+	}
+
+	private static final void putData(ResultSet rs, Map<String, Object> ret, List<Map<String, Object>> resultMappping) {
+		Class<?> type = null;
+		String field = null;
+		String tbField = null;
+		for (Map<String, Object> item : resultMappping) {
+			if(null == item) {
+				continue;
+			}
+			field = DTU.cvt(String.class, item.get("field"));
+			if(null == field) {
+				continue;
+			}
+			tbField = DTU.cvt(String.class, item.get("tbField"));
+			if(null == tbField) {
+				continue;
+			}
+			type = DTU.cvt(Class.class, item.get("type"));
+			if(null == type) {
+				type = Object.class;
+			}
+			try {
+				ret.put(field, DTU.cvt(type, rs.getObject(tbField)));
+			} catch (SQLException e) {
+				ret.put(field, null);
+			}
 		}
 	}
 
@@ -600,6 +814,7 @@ public class SpringDaoUtils {
 		findRetData.put("hasNextPage", hasNextPage);
 	}
 
+	/**@author hcqt@qq.com*/
 	public static final Integer calcStartNumByPageNum(Integer pageNum, Integer pageSize) {
 		if(pageNum == null) {
 			return null;
@@ -615,11 +830,325 @@ public class SpringDaoUtils {
 		}
 		return (pageNum - 1) * pageSize;
 	}
+public static int i = 0;
+	/**@author hcqt@qq.com*/
+	@SuppressWarnings("unchecked")
+	public static final <T> T formatResultMap(List<Map<String, Object>> resultMapping, List<Map<String, Object>> result, Class<T> resultClazz, Map<String, Object> parentRow) {
+		if(result == null) {
+			return null;
+		}
+		T ret;
+		if(resultClazz == null) {
+			throw new BaseException("spring_dao_2j83X", "必须指定容纳结果集数据的数据类型class，允许的类型有map与collection");
+		}
+		if(Map.class.isAssignableFrom(resultClazz)) {
+			if(resultClazz.isInterface()) {
+				resultClazz = (Class<T>) HashMap.class;
+			}
+		}
+		else if(Collection.class.isAssignableFrom(resultClazz)) {
+			if(resultClazz.isInterface()) {
+				resultClazz = (Class<T>) HashSet.class;
+			}
+		}
+		else {
+			throw new BaseException("spring_dao_32tdc", "指定容纳结果集数据的数据类型class只允许map与collection，您传入的数据类型为——{0}", resultClazz.getName());
+		}
+		try {
+			ret = resultClazz.newInstance();
+		} catch (InstantiationException | IllegalAccessException e) {
+			throw new BaseException("spring_dao_23T5d", "指定容纳结果集数据的数据类型class无法实例化，您传入的数据类型为——{0}，异常——{1}", resultClazz.getName(), EU.out(e));
+		}
+		for (Map<String, Object> currentRow : result) {
+			if(currentRow == null) {
+				continue;
+			}
+//			// 处理列，获取数据库列名称然后进行取值，取值后，放入指定的key当中，如果数据库列名是一个嵌套结构，那么展开嵌套，嵌套的数据容器按照type反射
+//			rowMapping(resultMapping, result, needDuplicateRemoval, row, ret);
+			rowMapping(resultMapping, result, resultClazz, currentRow, ret, parentRow);
+		}
+		return ret;
+	}
 
+	private static final <T> void rowMapping(
+			List<Map<String, Object>> resultMapping, 
+			List<Map<String, Object>> result, 
+			Class<T> resultClazz, 
+			Map<String, Object> currentRow, 
+			T alreadyCreateRows, 
+			Map<String, Object> parentRow) {
+		// 从map映射中获取父级字段的名称，然后到父级行内拿到父级字段的值
+		// 从当前行中获取对应字段的值
+		// 然后父子两个值进行比较，如果不相等，立即中断此方法，如果相等，判断下一个父级字段
+		// 逐个从当前行按照映射取值，把取到的值放入新行内，如果所有字段均顺利通过，那么把新行放入结果集内
+		int i = 0;
+		int onlyFieldNum = onlyFieldNum(resultMapping);
+		Map<String, Object> newRow = new HashMap<>();
+		for (Map<String, Object> _resultMapping : resultMapping) {
+			Object tbField = _resultMapping.get("tbField");
+			Class<?> type = DTU.cvt(Class.class, _resultMapping.get("type"));
+			Object columnVal = columnMapping(tbField, type, currentRow, newRow, result);
+			String parentField = DTU.cvt(String.class, _resultMapping.get("parentField"));
+			// 判断父字段的值是否符合约定，如果不符合，直接中断当前行
+			if(!columnParentCheck(columnVal, parentField, type, parentRow)) {
+				return;
+			}
+			Boolean isRowOnly = DTU.cvt(Boolean.class, _resultMapping.get("isRowOnly"));
+			// 判断需要唯一的字段是否唯一，如果不唯一，中断当前行
+			if(!columnOnlyCheck(columnVal, parentField, type, isRowOnly, alreadyCreateRows)) {
+				i++;
+				if(i == onlyFieldNum) {
+					return;
+				}
+			}
+			String field = DTU.cvt(String.class, _resultMapping.get("field"));
+			newRow.put(field, columnVal);
+		}
+		if(Map.class.isAssignableFrom(alreadyCreateRows.getClass())) {
+			@SuppressWarnings("unchecked")
+			Map<String, Object> map = DTU.cvt(Map.class, alreadyCreateRows);
+			map.putAll(newRow);
+		}
+		else if(Collection.class.isAssignableFrom(alreadyCreateRows.getClass())) {
+			@SuppressWarnings("unchecked")
+			Collection<Map<String, Object>> list = DTU.cvt(Collection.class, alreadyCreateRows);
+			list.add(newRow);
+		}
+	}
+
+	private static final int onlyFieldNum(List<Map<String, Object>> resultMapping) {
+		if(resultMapping == null) {
+			return 0;
+		}
+		int ret = 0;
+		for (Map<String, Object> _resultMapping : resultMapping) {
+			if(_resultMapping.get("isRowOnly") != null && DTU.cvt(Boolean.class, _resultMapping.get("isRowOnly"))) {
+				ret++;
+			}
+		}
+		return ret;
+	}
+
+	private static final <T> boolean columnOnlyCheck(
+			Object columnVal,
+			String field,
+			Class<?> type,
+			Boolean isRowOnly, 
+			T alreadyCreateRows
+			) {
+		if(isRowOnly == null) {
+			return true;
+		}
+		if(!isRowOnly) {
+			return true;
+		}
+		if(Map.class.isAssignableFrom(alreadyCreateRows.getClass())) {
+			@SuppressWarnings("unchecked")
+			Map<String, Object> alreadyCreateRow = DTU.cvt(Map.class, alreadyCreateRows);
+			Boolean canPass = columnOnlyCheck_map(alreadyCreateRow, columnVal, field, type, isRowOnly);
+			if(canPass == null) {
+				canPass = true;
+			}
+			return canPass;
+		}
+		else if(Collection.class.isAssignableFrom(alreadyCreateRows.getClass())) {
+			@SuppressWarnings("unchecked")
+			Collection<Map<String, Object>> _alreadyCreateRows = DTU.cvt(Collection.class, alreadyCreateRows);
+			for (Map<String, Object> alreadyCreateRow : _alreadyCreateRows) {
+				Boolean canPass = columnOnlyCheck_map(alreadyCreateRow, columnVal, field, type, isRowOnly);
+				if(canPass == null) {
+					continue;
+				}
+				return canPass;
+			}
+		}
+		else {
+			throw new BaseException("spring_dao_3W4q6", "指定容纳结果集数据的数据类型只允许map与collection，您传入的数据类型为——{0}", alreadyCreateRows.getClass());
+		}
+		return true;
+	}
+
+	private static final Boolean columnOnlyCheck_map(
+			Map<String, Object> alreadyCreateRow,
+			Object columnVal,
+			String field,
+			Class<?> type,
+			Boolean isRowOnly) {
+		if(alreadyCreateRow == null) {
+			return null;
+		}
+		Object alreadyCreateColumnVal = DTU.cvt(type, alreadyCreateRow.get(field));
+		if(alreadyCreateColumnVal == null) {
+			return null;
+		}
+		if(columnVal == null) {
+			return true;
+		}
+		if(alreadyCreateColumnVal.equals(columnVal)) {
+			return false;
+		}
+		return null;
+	}
+
+	private static final boolean columnParentCheck(
+			Object columnVal,
+			String parentField,
+			Class<?> type,
+			Map<String, Object> parentRow
+			) {
+		if(parentField == null) {
+			return true;
+		}
+		if(columnVal == null) {
+			return false;
+		}
+		Object parentVal = null;
+		try {
+			parentVal = DTU.cvt(type, parentRow.get(parentField));
+		} catch (BaseException e) {
+			return false;
+		}
+		return columnVal.equals(parentVal);
+	}
+
+	private static final <T> Object columnMapping(
+			Object tbField,
+			Class<?> type,
+			Map<String, Object> currentDbRow, 
+			Map<String, Object> currentPgRow, 
+			List<Map<String, Object>> result
+			) {
+		if(tbField == null) {
+			return null;
+		}
+		if(String.class.isAssignableFrom(tbField.getClass())) {
+			return currentDbRow.get(tbField);
+		}
+		else {
+			@SuppressWarnings("unchecked")
+			List<Map<String, Object>> resultMapping = DTU.cvt(List.class, tbField);
+			return formatResultMap(resultMapping, result, type, currentPgRow);
+		}
+	}
+
+	/**@author hcqt@qq.com*/
+	public static final Map<String, Object> genFieldMapping(Object tbField, String field, String parentField, Class<?> type, Boolean isRowOnly) {
+		Map<String, Object> ret = new HashMap<>();
+		if(tbField != null) {
+			ret.put("tbField", tbField);
+		}
+		if(field != null) {
+			ret.put("field", field);
+		}
+		if(parentField != null) {
+			ret.put("parentField", parentField);
+		}
+		if(type != null) {
+			ret.put("type", type);
+		}
+		if(isRowOnly == null || !isRowOnly) {
+			ret.put("isRowOnly", false);
+		} else {
+			ret.put("isRowOnly", true);
+		}
+		return ret;
+	}
+	
+	/**@author hcqt@qq.com*/
+	public static final Map<String, Object> genFieldMapping(Object tbField, String field, Class<?> type) {
+		return genFieldMapping(tbField, field, null, type, false);
+	}
+
+	/**@author hcqt@qq.com*/
+	@SuppressWarnings("unchecked")
+	public static final List<Map<String, Object>> genFieldMapping(@SuppressWarnings("rawtypes") Map... maps) {
+		if(maps == null || maps.length < 1) {
+			return null;
+		}
+		List<Map<String, Object>> ret = new ArrayList<>(maps.length);
+		for (Map<String, Object> map : maps) {
+			if(map == null) {
+				continue;
+			}
+			ret.add(map);
+		}
+		return ret;
+	}
+
+	private static final String[] KEW_WORD_ARR = {
+			"=",
+			"<",
+			">",
+			"<=",
+			">=",
+			"<>",
+			"IS NULL",
+			"IS NOT NULL",
+			"LIKE",
+			"NOT LIKE",
+			"IN",
+			"NOT IN",
+			"BETWEEN",
+			"REGEXP"
+	};
+
+	private static final void fixWhereSql(StringBuilder sql) {
+		String whereSql = SU.subStringAfter(sql.toString(), "WHERE", 1, true);
+		if(whereSql == null) {
+			return;
+		}
+		String beforeGroupBySql = SU.subStringBefore(whereSql, "GROUP BY", 1, true);
+		if(beforeGroupBySql != null) {
+			if(!fixWhereSql_containsKewWord(beforeGroupBySql)) {
+				int start = SU.indexOf(sql.toString(), "WHERE", 1, true);
+				int end = SU.indexOf(sql.toString(), "GROUP BY", 1, true);
+				sql.delete(start, end);
+			}
+			return;
+		}
+		
+		String beforeOrderBySql = SU.subStringBefore(whereSql, "ORDER BY", 1, true);
+		if(beforeOrderBySql != null) {
+			if(!fixWhereSql_containsKewWord(beforeOrderBySql)) {
+				int start = SU.indexOf(sql.toString(), "WHERE", 1, true);
+				int end = SU.indexOf(sql.toString(), "ORDER BY", 1, true);
+				sql.delete(start, end);
+			}
+			return;
+		}
+		String beforeLimitSql = SU.subStringBefore(whereSql, "LIMIT", 1, true);
+		if(beforeLimitSql != null) {
+			if(!fixWhereSql_containsKewWord(beforeLimitSql)) {
+				int start = SU.indexOf(sql.toString(), "WHERE", 1, true);
+				int end = SU.indexOf(sql.toString(), "LIMIT", 1, true);
+				sql.delete(start, end);
+			}
+			return;
+		}
+		if(!fixWhereSql_containsKewWord(whereSql)) {
+			int start = SU.indexOf(sql.toString(), "WHERE", 1, true);
+			int end = sql.length();
+			sql.delete(start, end);
+		}
+		// 多余的AND符号
+		SU.deleteSuffix(sql, "AND", true);
+		// 多余的AND符号
+		SU.deleteSuffix(sql, "OR", true);
+	}
+
+	private static final boolean fixWhereSql_containsKewWord(String whereSql) {
+		boolean flag = false;
+		for (int i = 0; i < KEW_WORD_ARR.length && !flag; i++) {
+			if(whereSql.contains(KEW_WORD_ARR[i])) {
+				flag = true;
+			}
+		}
+		return flag;
+	}
+	
 	/**@author hcqt@qq.com*/
 	private static final int findAutoCount(
 			JdbcOperations jdbcOperations, 
-			Boolean needResultSequence, 
 			String sql, 
 			List<Object> params) {
 		sql = sql.replaceAll("\\s+", " ");
@@ -638,9 +1167,7 @@ public class SpringDaoUtils {
 		}
 		// 把原始sql当中的字段替换成COUNT聚合
 		sql = sql.replaceAll("SELECT.*FROM", "SELECT COUNT(1) AS countNum FROM");
-		Map<String, String> resultMappping = new HashMap<>();
-		resultMappping.put("countNum", "countNum");
-		List<Map<String, Object>> result = find(jdbcOperations, resultMappping, needResultSequence, sql, params);
+		List<Map<String, Object>> result = find(jdbcOperations, sql, params);
 		if(null == result) {
 			return 0;
 		}
@@ -674,7 +1201,7 @@ public class SpringDaoUtils {
 	}
 
 	/**@author hcqt@qq.com*/
-	private static final void orderBySql(StringBuilder sql, String orderBy, Map<String, String> fieldsMapping) {
+	private static final void createOrderBySql(StringBuilder sql, String orderBy, Map<String, String> fieldsMapping) {
 		/*
 		 * 按照逗号分隔，每一段逐个解析
 		 */
@@ -713,7 +1240,7 @@ public class SpringDaoUtils {
 	}
 
 	/**@author hcqt@qq.com*/
-	private static final void limitSql(StringBuilder sql, Integer startNum, Integer rowNum, List<Object> params) {
+	private static final void createLimitSql(StringBuilder sql, Integer startNum, Integer rowNum, List<Object> params) {
 		if (null != startNum && null != rowNum) {
 			sql.append(" LIMIT ?,?");
 			params.add(startNum);
@@ -725,7 +1252,7 @@ public class SpringDaoUtils {
 	}
 
 	/**@author hcqt@qq.com*/
-	private static final void groupBySql(StringBuilder sql, String groupByHaving, Map<String, String> fieldsMapping) {
+	private static final void createGroupBySql(StringBuilder sql, String groupByHaving, Map<String, String> fieldsMapping) {
 		if(null == groupByHaving) {
 			return;
 		}
@@ -874,64 +1401,11 @@ public class SpringDaoUtils {
 		}
 		return sql.toString();
 	}
-	
-//	public static void main(String[] args) {
-////		String table = "table1 as a left join table2 as b join table3 c right join test.table1 d inner Join  test.table1  e join test.table2 ";
-////		String table = "table3 c right join test.table1 d inner Join  test.table1  e";
-//		String table = "test.table3 c right join test.table1 d inner Join  test.table1  e";
-//		Map<String, String> tablesMapping = new HashMap<>();
-//		tablesMapping.put("table1", "user");
-//		tablesMapping.put("table2", "userInfo");
-//		tablesMapping.put("table3", "userLog");
-//		StringBuilder sql = new StringBuilder();
-//		tableSql(sql, tablesMapping, table);
-//		System.out.println(sql.toString());
-//	}
+
 	private static final String[] separators = {"JOIN","INNER JOIN","LEFT JOIN","LEFT OUTER JOIN","RIGHT JOIN","RIGHT OUTER JOIN","FULL JOIN","FULL OUTER JOIN","CROSS JOIN"," ON "};
 
-//	private static final void tableSql(StringBuilder sql, Map<String, String> tablesMapping, String table) {
-//		table = table.replaceAll("\\s+", " ").trim();
-//		String firstSeparator = getFirstSeparator(table, separators);
-//		String current;
-//		if(null == firstSeparator) {
-//			current = table;
-//		} else {
-//			current = SU.subStringBeforIgnoreCase(table, firstSeparator, 1);
-//		}
-//		current = current.trim();
-//		String currentNameSpace = SU.subStringBefor(current, ".", -1);
-//		String currentTableAndAlias = SU.subStringAfter(current, ".", -1);
-//		if(null == currentTableAndAlias) {
-//			currentTableAndAlias = current;
-//		}
-//		String currentTableName = SU.subStringBeforIgnoreCase(currentTableAndAlias, " AS ", -1);
-//		String currentAlias = SU.subStringAfterIgnoreCase(currentTableAndAlias, " AS ", -1);
-//		if(null == currentTableName) {
-//			currentTableName = SU.subStringBefor(currentTableAndAlias, " ", -1);
-//		}
-//		if(null != tablesMapping && null != tablesMapping.get(currentTableName)) {
-//			currentTableName = tablesMapping.get(currentTableName);
-//		}
-//		if(null == currentAlias) {
-//			currentAlias = SU.subStringAfter(currentTableAndAlias, " ", -1);
-//		}
-//		sql.append(" ");
-//		if(null != currentNameSpace) {
-//			sql.append(currentNameSpace).append(".");
-//		}
-//		if(null != currentTableName) {
-//			sql.append(currentTableName);
-//		}
-//		if(null != currentAlias) {
-//			sql.append(" AS ").append(currentAlias);
-//		}
-//		if(null != firstSeparator) {
-//			sql.append(" ").append(firstSeparator);
-//			tableSql(sql, tablesMapping, SU.subStringAfterIgnoreCase(table, firstSeparator, 1));
-//		}
-//	}
 	/**@author hcqt@qq.com*/
-	private static final void tableSql(StringBuilder sql, Map<String, String> tablesMapping, Map<String, String> fieldsMapping, String table) {
+	private static final void createTableSql(StringBuilder sql, Map<String, String> tablesMapping, Map<String, String> fieldsMapping, String table) {
 		table = table.replaceAll("\\s+", " ").trim();
 		String firstSeparator = getFirstSeparator(table, separators);
 		String current;
@@ -950,7 +1424,7 @@ public class SpringDaoUtils {
 		}
 		if(null != firstSeparator) {
 			sql.append(" ").append(firstSeparator);
-			tableSql(sql, tablesMapping, fieldsMapping, SU.subStringAfterIgnoreCase(table, firstSeparator, 1));
+			createTableSql(sql, tablesMapping, fieldsMapping, SU.subStringAfterIgnoreCase(table, firstSeparator, 1));
 		}
 	}
 
@@ -1034,36 +1508,13 @@ public class SpringDaoUtils {
 		return b[0];
 	}
 
-//	private static final Map<String, Integer> separatorFirstIndex(String str, String[] separators) {
-//		if(null == str) {
-//			return null;
-//		}
-//		Map<String, Integer> ret = new HashMap<>();
-//		for (String separator : separators) {
-//			if(null == separator) {
-//				ret.put(separator, -1);
-//			}
-//			ret.put(separator, str.indexOf(separator));
-//		}
-//		return ret;
-//	}
-	
-//	private static final Map<String, Integer> separatorFirstIndexIgnoreCase(String str, String[] separators) {
-//		if(null == str) {
-//			return null;
-//		}
-//		Map<String, Integer> ret = new HashMap<>();
-//		for (String separator : separators) {
-//			if(null == separator) {
-//				ret.put(separator, -1);
-//			}
-//			ret.put(separator, str.toUpperCase().indexOf(separator.toUpperCase()));
-//		}
-//		return ret;
-//	}
-
 	/**@author hcqt@qq.com*/
-	private static final void whereSql(StringBuilder sql, Object where, Map<String, String> fieldsMapping, List<Object> params) {
+	private static final void createWhereSql(StringBuilder sql, Object where, Map<String, String> fieldsMapping, List<Object> params) {
+		createWhereSql0(sql, where, fieldsMapping, params);
+		fixWhereSql(sql);
+	}
+
+	private static final void createWhereSql0(StringBuilder sql, Object where, Map<String, String> fieldsMapping, List<Object> params) {
 		if(null == where) {
 			return;
 		}
@@ -1075,9 +1526,10 @@ public class SpringDaoUtils {
 			List<Object> list = (List<Object>) where;
 			sql.append(" (");
 			for (Object item : list) {
-				whereSql(sql, item, fieldsMapping, params);
+				createWhereSql0(sql, item, fieldsMapping, params);
 			}
 			SU.deleteSuffix(sql, "AND");
+			SU.deleteSuffix(sql, "OR");
 			sql.append(")");
 		}
 		else if(Map.class.isAssignableFrom(where.getClass())) {
@@ -1086,7 +1538,7 @@ public class SpringDaoUtils {
 			Opt opt = DTU.cvt(Opt.class, MU.getIgnoreCase(map, "opt"));
 			String conn = DTU.cvt(String.class, MU.getIgnoreCase(map, "conn"));
 			if(opt == null && conn == null) {// 如果map没有遵循规范，自动规范，然后递归此方法
-				whereSql(sql, whereMapFormat(map), fieldsMapping, params);
+				createWhereSql0(sql, whereMapFormat(map), fieldsMapping, params);
 			} else {
 				if(null != opt && null != MU.getIgnoreCase(map, "field")) {
 					whereSqlMap0(sql, opt, map, fieldsMapping, params);
@@ -1108,27 +1560,32 @@ public class SpringDaoUtils {
 				// 判断是否为json字符串，如果是json字符串，就格式化为list/map嵌套格式，然后递归此方法
 				// 如果不是json字符串，先抛出异常，将来兼容
 				try {
-					whereSql(sql, JU.toObj(conn), fieldsMapping, params);
+					createWhereSql0(sql, JU.toObj(conn), fieldsMapping, params);
 				} catch (Exception e) {
 					throw new BaseException("springDaoUtils_83n0J", "传入的where条件不符合规范");
 				}
 			}
 		}
+		// 尝试是否是javaBean，如果是，把javabean转换为键值对，再递归此方法，而且，如果是javabean的话，空值不做where等值判断
+		else {
+			Map<String, Object> _where = BeanUtils.bean2Map(where);
+			try {
+				_where = BeanUtils.bean2Map(where);
+			} catch (BaseException e) {
+				throw new BaseException("springDaoUtils_823hK", "传入的where条件不符合规范");
+			}
+			if(_where == null) {
+				throw new BaseException("springDaoUtils_36tdr", "传入的where条件不符合规范");
+			}
+			Map<String, Object> newWhere = new HashMap<>(_where); 
+			for (Entry<String, Object> entry : _where.entrySet()) {
+				if(entry.getValue() == null) {
+					newWhere.remove(entry.getKey());
+				}
+			}
+			createWhereSql0(sql, newWhere, fieldsMapping, params);
+		}
 	}
-
-//	@SuppressWarnings("unchecked")
-//	private static final void whereSqlEQ(
-//			StringBuilder sql, 
-//			Map<String, Object> where, 
-//			Map<String, String> fieldsMapping) {
-//		Object val = MU.getIgnoreCase(where, "val");
-//		sql.append(" ").append(aliasField(where, fieldsMapping));
-//		if(val instanceof Map) {
-//			sql.append("=").append(aliasField(DTU.cvt(Map.class, val), fieldsMapping));
-//		} else {
-//			sql.append("=?");
-//		}
-//	}
 
 	/**@author hcqt@qq.com*/
 	private static final void whereSqlMap0(
@@ -1141,82 +1598,84 @@ public class SpringDaoUtils {
 			opt = Opt.EQ;
 		}
 		Object val = MU.getIgnoreCase(where, "val");
-		if(null != val && val.getClass().isArray()) {
+		if(null != val && 
+				(val.getClass().isArray() || 
+				Collection.class.isAssignableFrom(val.getClass()))) {
 			if(opt.equals(Opt.EQ)) {
 				opt = Opt.IN;
 			}
 		} 
 		switch (opt) {
 			case EQ: {
-				whereSqlSwitch0(sql, where, fieldsMapping, opt, params);
+				createWhereSqlSwitch0(sql, where, fieldsMapping, opt, params);
 				break;
 			}
 			case LT: {
-				whereSqlSwitch0(sql, where, fieldsMapping, opt, params);
+				createWhereSqlSwitch0(sql, where, fieldsMapping, opt, params);
 				break;
 			}
 			case GT: {
-				whereSqlSwitch0(sql, where, fieldsMapping, opt, params);
+				createWhereSqlSwitch0(sql, where, fieldsMapping, opt, params);
 				break;
 			}
 			case LE: {
-				whereSqlSwitch0(sql, where, fieldsMapping, opt, params);
+				createWhereSqlSwitch0(sql, where, fieldsMapping, opt, params);
 				break;
 			}
 			case GE: {
-				whereSqlSwitch0(sql, where, fieldsMapping, opt, params);
+				createWhereSqlSwitch0(sql, where, fieldsMapping, opt, params);
 				break;
 			}
 			case NEQ: {
-				whereSqlSwitch0(sql, where, fieldsMapping, opt, params);
+				createWhereSqlSwitch0(sql, where, fieldsMapping, opt, params);
 				break;
 			}
 			case EM: {
-				whereSqlSwitch1(sql, where, fieldsMapping, opt);
+				createWhereSqlSwitch1(sql, where, fieldsMapping, opt);
 				break;
 			}
 			case NEM: {
-				whereSqlSwitch1(sql, where, fieldsMapping, opt);
+				createWhereSqlSwitch1(sql, where, fieldsMapping, opt);
 				break;
 			}
 			case LK: {
-				whereSqlSwitch3(sql, where, fieldsMapping, opt, params);
+				createWhereSqlSwitch3(sql, where, fieldsMapping, opt, params);
 				break;
 			}
 			case LKL: {
-				whereSqlSwitch3(sql, where, fieldsMapping, opt, params);
+				createWhereSqlSwitch3(sql, where, fieldsMapping, opt, params);
 				break;
 			}
 			case LKR: {
-				whereSqlSwitch3(sql, where, fieldsMapping, opt, params);
+				createWhereSqlSwitch3(sql, where, fieldsMapping, opt, params);
 				break;
 			}
 			case NLK: {
-				whereSqlSwitch3(sql, where, fieldsMapping, opt, params);
+				createWhereSqlSwitch3(sql, where, fieldsMapping, opt, params);
 				break;
 			}
 			case NLKL: {
-				whereSqlSwitch3(sql, where, fieldsMapping, opt, params);
+				createWhereSqlSwitch3(sql, where, fieldsMapping, opt, params);
 				break;
 			}
 			case NLKR: {
-				whereSqlSwitch3(sql, where, fieldsMapping, opt, params);
+				createWhereSqlSwitch3(sql, where, fieldsMapping, opt, params);
 				break;
 			}
 			case IN : {
-				whereSqlSwitch2(sql, where, fieldsMapping, opt, params);
+				createWhereSqlSwitch2(sql, where, fieldsMapping, opt, params);
 				break;
 			}
 			case NIN : {
-				whereSqlSwitch2(sql, where, fieldsMapping, opt, params);
+				createWhereSqlSwitch2(sql, where, fieldsMapping, opt, params);
 				break;
 			}
 			case BT : {
-				whereSqlSwitchBT(sql, where, fieldsMapping, params);
+				createWhereSqlSwitchBT(sql, where, fieldsMapping, params);
 				break;
 			}
 			case RE : {
-				whereSqlSwitchRE(sql, where, fieldsMapping, params);
+				createWhereSqlSwitchRE(sql, where, fieldsMapping, params);
 				break;
 			}
 			default:
@@ -1227,7 +1686,7 @@ public class SpringDaoUtils {
 
 	/**@author hcqt@qq.com*/
 	@SuppressWarnings("unchecked")
-	private static final void whereSqlSwitch0(
+	private static final void createWhereSqlSwitch0(
 			StringBuilder sql, 
 			Map<String, Object> where, 
 			Map<String, String> fieldsMapping, 
@@ -1267,7 +1726,7 @@ public class SpringDaoUtils {
 	}
 
 	/**@author hcqt@qq.com*/
-	private static final void whereSqlSwitch1(
+	private static final void createWhereSqlSwitch1(
 			StringBuilder sql, 
 			Map<String, Object> where, 
 			Map<String, String> fieldsMapping, 
@@ -1287,7 +1746,7 @@ public class SpringDaoUtils {
 	}
 
 	/**@author hcqt@qq.com*/
-	private static final void whereSqlSwitch2(
+	private static final void createWhereSqlSwitch2(
 			StringBuilder sql, 
 			Map<String, Object> where, 
 			Map<String, String> fieldsMapping, 
@@ -1309,13 +1768,6 @@ public class SpringDaoUtils {
 		if(DTU.deepIsNull(arr)) {
 			throw new BaseException("springDaoUtils_mj3kP", "使用in运算符时，传入值必须是“数组”/“Collection”，且不能为空");
 		}
-//		for (Object it : arr) {
-//			if(DTU.isNum(it)) {
-//				sql.append(it).append(",");
-//			} else {
-//				sql.append("'").append(escapeSpecialChar(DTU.cvt(String.class, it))).append("'").append(",");
-//			}
-//		}
 		for (Object it : arr) {
 			if(DTU.isNum(it)) {
 				sql.append("?,");
@@ -1329,7 +1781,7 @@ public class SpringDaoUtils {
 	}
 
 	/**@author hcqt@qq.com*/
-	private static final void whereSqlSwitchBT(
+	private static final void createWhereSqlSwitchBT(
 			StringBuilder sql, 
 			Map<String, Object> where, 
 			Map<String, String> fieldsMapping,
@@ -1357,7 +1809,7 @@ public class SpringDaoUtils {
 	}
 
 	/**@author hcqt@qq.com*/
-	private static final void whereSqlSwitchRE(
+	private static final void createWhereSqlSwitchRE(
 			StringBuilder sql, 
 			Map<String, Object> where, 
 			Map<String, String> fieldsMapping, 
@@ -1372,7 +1824,7 @@ public class SpringDaoUtils {
 	}
 
 	/**@author hcqt@qq.com*/
-	private static final void whereSqlSwitch3(
+	private static final void createWhereSqlSwitch3(
 			StringBuilder sql, 
 			Map<String, Object> where, 
 			Map<String, String> fieldsMapping, 
@@ -1403,55 +1855,6 @@ public class SpringDaoUtils {
 				break;
 		}
 		params.add(escapeSpecialChar(DTU.cvt(String.class, MU.getIgnoreCase(where, "val"))));
-		
-//		sql.append(" ").append(aliasField(where, fieldsMapping));
-//		switch (opt) {
-//			case LK:
-//				sql.append(" LIKE '%");
-//				break;
-//			case LKL:
-//				sql.append(" LIKE '%");
-//				break;
-//			case LKR:
-//				sql.append(" LIKE '");
-//				break;
-//			case NLK:
-//				sql.append(" NOT LIKE '%");
-//				break;
-//			case NLKL:
-//				sql.append(" NOT LIKE '%");
-//				break;
-//			case NLKR:
-//				sql.append(" NOT LIKE '");
-//				break;
-//			default:
-//				// 
-//				break;
-//		}
-//		sql.append(escapeSpecialChar(DTU.cvt(String.class, MU.getIgnoreCase(where, "val"))));
-//		switch (opt) {
-//			case LK:
-//				sql.append("%'");
-//				break;
-//			case LKL:
-//				sql.append("'");
-//				break;
-//			case LKR:
-//				sql.append("%'");
-//				break;
-//			case NLK:
-//				sql.append("%'");
-//				break;
-//			case NLKL:
-//				sql.append("'");
-//				break;
-//			case NLKR:
-//				sql.append("%'");
-//				break;
-//			default:
-////				throw new 
-//				break;
-//		}
 	}
 
 	/**@author hcqt@qq.com*/
@@ -1494,59 +1897,19 @@ public class SpringDaoUtils {
 	private static final String escapeSpecialChar(String str) {
 		return str.replace("'", "\\'").replace("%", "\\%").replace("_", "\\_").replace("\\", "\\\\\\");
 	}
-
-	private static final StringBuilder deleteSql(
+	
+	private static final void createDeleteSql(
 			Map<String, String> fieldsMapping, 
 			String tableName, 
-			List<Map<String, Object>> where) {
-		StringBuilder sql = new StringBuilder();
+			Object where, 
+			StringBuilder sql, 
+			List<Object> params) {
 		sql.append("DELETE FROM ").append(tableName);
-		sql.append("WHERE ");
-		String tbField = null;
-		String field = null;
-		String opt = null;
-		for (Map<String, Object> item : where) {
-			field = DTU.cvt(String.class, item.get("field"));
-			if(null == field) {
-				continue;
-			}
-			if(fieldsMapping != null) {
-				tbField = fieldsMapping.get(field);
-			} else {
-				tbField = field;
-			}
-			if(null == tbField) {
-				continue;
-			}
-			sql.append(tbField);
-			sql.append(" ");
-			opt = DTU.cvt(String.class, item.get("opt"));
-			if(null == opt) {
-				opt = "=";
-			}
-			sql.append(opt);
-			sql.append(" ? AND");
-		}
-		sql.delete(sql.length() - 3, sql.length());
-		return sql;
+		createWhereSql(sql, where, fieldsMapping, params);
 	}
 
-//	/**@author hcqt@qq.com*/
-//	private static final StringBuilder insertSql(
-//			Map<String, String> fieldsMapping, 
-//			String tableName, 
-//			String[] fields) {
-//		StringBuilder sql = new StringBuilder();
-//		sql.append("INSERT INTO");
-//		sql.append(" ").append(tableName);
-//		insertSqlAppendFields0(fieldsMapping, sql, fields);
-//		sql.append(" ").append("VALUES");
-//		insertSqlAppendFields1(fieldsMapping, sql, fields);
-//		return sql;
-//	}
-//	
 	/**@author hcqt@qq.com*/
-	private static final StringBuilder insertSql(
+	private static final StringBuilder createInsertSql(
 			Map<String, String> fieldsMapping, 
 			Map<String, String> tablesMapping, 
 			String tableName, 
@@ -1554,7 +1917,7 @@ public class SpringDaoUtils {
 			StringBuilder sql, 
 			List<Object> params) {
 		sql.append("INSERT INTO");
-		tableSql(sql, tablesMapping, fieldsMapping, tableName);
+		createTableSql(sql, tablesMapping, fieldsMapping, tableName);
 		sql.append(" (");
 		for (Entry<String, Object> param : data.entrySet()) {
 			if(param == null) {
@@ -1580,7 +1943,7 @@ public class SpringDaoUtils {
 	}
 
 	/**@author hcqt@qq.com*/
-	private static final void updateSql(
+	private static final void createUpdateSql(
 			Map<String, String> fieldsMapping, 
 			Map<String, String> tablesMapping, 
 			String tableName, 
@@ -1589,7 +1952,7 @@ public class SpringDaoUtils {
 			StringBuilder sql,
 			List<Object> params) {
 		sql.append("UPDATE ");
-		tableSql(sql, tablesMapping, fieldsMapping, tableName);
+		createTableSql(sql, tablesMapping, fieldsMapping, tableName);
 		sql.append(" SET ");
 		// 检查是否有set数据
 		if(Map.class.isAssignableFrom(setData.getClass())) {
@@ -1600,67 +1963,21 @@ public class SpringDaoUtils {
 				params.add(it.getValue());
 				sql.append("=?,");
 			}
-		} else {
+		} 
+		else if(String.class.isAssignableFrom(setData.getClass())) {
+			try {
+				createUpdateSql(fieldsMapping, tablesMapping, tableName, JU.toObj(DTU.cvt(String.class, setData)), where, sql, params);
+			} catch (BaseException e) {
+				throw new BaseException("spring_dao_8jK3L", "向数据库更新数据格式不符合规范，应该是键值对，或者json格式的键值对", e);
+			}
+		}
+		else {
 			// TODO 
 		}
 		SU.deleteSuffix(sql, ",");
-//		sql.delete(sql.length() - 1, sql.length());
-//		updateSqlAppendWhere(sql, fieldsMapping, where);
-		whereSql(sql, where, fieldsMapping, params);
+		createWhereSql(sql, where, fieldsMapping, params);
+		SU.deleteSuffix(sql, "AND", true);
 	}
-
-	/**@author hcqt@qq.com*/
-	private static final void renameDuplicateField(
-			List<String> fields, 
-			Map<String, Object> data, 
-			List<Map<String, Object>> where) {
-		String field = null;
-		Map<String, Object> item = null;
-		String renameField = null;
-		for (int i = 0; i < where.size(); i++) {
-			item = where.get(i);
-			if(null == item) {
-				continue;
-			}
-			field = DTU.cvt(String.class, item.get("field"));
-			if(null == field) {
-				continue;
-			}
-			renameField = "w" + i + "_" + field;
-			fields.add(renameField);
-			data.put(renameField, item.get("val"));
-		}
-	}
-
-//	private static final void updateSqlAppendWhere(
-//			StringBuilder sql, 
-//			Map<String, String> fieldsMapping, 
-//			List<Map<String, Object>> where) {
-//		sql.append("WHERE");
-//		String field = null;
-//		String tbField = null;
-//		String opt = null;
-//		for (Map<String, Object> item : where) {
-//			field = DTU.cvt(String.class, item.get("field"));
-//			if(null == field) {
-//				continue;
-//			}
-//			if(null == fieldsMapping) {
-//				tbField = field;
-//			} else {
-//				tbField = fieldsMapping.get(field);
-//			}
-//			sql.append(" ").append(tbField);
-//			opt = DTU.cvt(String.class, item.get("opt"));
-//			if(null == opt) {
-//				sql.append("=");
-//			} else {
-//				sql.append(opt);
-//			}
-//			sql.append(" ? AND");
-//		}
-//		sql.delete(sql.length() - 3, sql.length());
-//	}
 
 	/**@author hcqt@qq.com*/
 	private static final void catchException(RuntimeException runtimeException) {
@@ -1812,123 +2129,6 @@ public class SpringDaoUtils {
 		System.out.println("\n\n\n未捕获的SQLState\t" + sqlException.getSQLState() + "未捕获的SQL错误号\t"+sqlException.getErrorCode()+"\n\n\n");
 		throw runtimeException;
 	}
-
-	/**@author hcqt@qq.com*/
-	private static final void setData(
-			PreparedStatement ps, 
-			String[] fields, 
-			Map<String, Object> data
-			) throws SQLException {
-		Object val = null;
-		for (int i = 1; i <= fields.length; i++) {
-			val = data.get(fields[i - 1]);
-			if(val instanceof String) {
-				ps.setString(i, DTU.cvt(String.class, val));
-			}
-			else if(val instanceof Number) {
-				if(val instanceof Integer) {
-					ps.setInt(i, DTU.cvt(Integer.class, val));
-				}
-				else if(val instanceof Long) {
-					ps.setLong(i, DTU.cvt(Long.class, val));
-				}
-				else if(val instanceof Double) {
-					ps.setDouble(i, DTU.cvt(Double.class, val));
-				}
-				else if(val instanceof BigDecimal) {
-					ps.setBigDecimal(i, DTU.cvt(BigDecimal.class, val));
-				}
-				else if(val instanceof Float) {
-					ps.setFloat(i, DTU.cvt(Float.class, val));
-				}
-				else if(val instanceof Short) {
-					ps.setShort(i, DTU.cvt(Short.class, val));
-				} 
-				else {
-					ps.setObject(i, val);
-				}
-			}
-			else if(val instanceof Date) {
-				if(val instanceof Time) {
-					ps.setTime(i, DTU.cvt(java.sql.Time.class, val));
-				}
-				else if(val instanceof Timestamp) {
-					ps.setTimestamp(i, DTU.cvt(java.sql.Timestamp.class, val));
-				} 
-				else {
-					ps.setDate(i, DTU.cvt(java.sql.Date.class, val));
-				}
-			}
-			else if(val instanceof Blob) {
-				ps.setBlob(i, DTU.cvt(Blob.class, val));
-			}
-			else if(val instanceof Boolean) {
-				ps.setBoolean(i, DTU.cvt(Boolean.class, val));
-			}
-			else if(val instanceof Clob) {
-				ps.setClob(i, DTU.cvt(Clob.class, val));
-			}
-			else if(val instanceof byte[]) {
-				ps.setBytes(i, DTU.cvt(byte[].class, val));
-			}
-			else {
-				ps.setObject(i, val);
-			}
-//			ps.setCharacterStream(parameterIndex, reader, length);
-//			ps.setArray(parameterIndex, x);
-//			ps.setAsciiStream(parameterIndex, x);
-//			ps.setTime(parameterIndex, x, cal);
-//			ps.setTimestamp(parameterIndex, x, cal);
-//			ps.setNull(parameterIndex, sqlType);
-//			ps.setURL(parameterIndex, x);
-		}
-	}
-//
-//	/**@author hcqt@qq.com*/
-//	private static final void insertSqlAppendFields0(
-//			Map<String, String> fieldsMapping, 
-//			StringBuilder sql, 
-//			String[] fields) {
-//		sql.append("(");
-//		String tbField = null;
-//		for (String field : fields) {
-//			if(null == fieldsMapping) {
-//				tbField = field;
-//			} else {
-//				tbField = fieldsMapping.get(field);
-//			}
-//			if(null == tbField) {
-//				continue;
-//			}
-//			sql.append(tbField);
-//			sql.append(",");
-//		}
-//		sql.delete(sql.length() - 1, sql.length());
-//		sql.append(")");
-//	}
-//
-//	/**@author hcqt@qq.com*/
-//	private static final void insertSqlAppendFields1(
-//			Map<String, String> fieldsMapping, 
-//			StringBuilder sql, 
-//			String[] fields) {
-//		sql.append("(");
-//		String tbField = null;
-//		for (String field : fields) {
-//			if(null == fieldsMapping) {
-//				tbField = field;
-//			} else {
-//				tbField = fieldsMapping.get(field);
-//			}
-//			if(null == tbField) {
-//				continue;
-//			}
-//			sql.append("?");
-//			sql.append(",");
-//		}
-//		sql.delete(sql.length() - 1, sql.length());
-//		sql.append(")");
-//	}
 
 	private static final String msg2Code = "spring_dao_28219";
 	private static final String msg2 = "输入值数据长度超出数据库限制，详情——{0}";
