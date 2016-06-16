@@ -168,7 +168,7 @@ public class StringUtils {
 		if(null == after) {// 如果原始文本中不存在指定的字符串
 			return;
 		}
-		if(after.matches("\\w+")) {// 如果原始文本的指定字符串后还有字母数字下划线
+		if(!after.matches("\\s*")) {// 如果原始文本的指定字符串后还有字母数字下划线
 			return;
 		}
 		int start = indexOf(str.toString(), suffix, -1, isIgnoreCase);
@@ -196,7 +196,7 @@ public class StringUtils {
 		if(null == before) {// 如果原始文本中不存在指定的字符串
 			return;
 		}
-		if(before.matches("\\w+")) {// 如果原始文本的指定字符串后还有字母数字下划线
+		if(!before.matches("\\s*")) {// 如果原始文本的指定字符串后还有字母数字下划线
 			return;
 		}
 		int start = 0;
