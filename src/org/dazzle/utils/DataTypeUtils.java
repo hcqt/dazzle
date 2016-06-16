@@ -392,6 +392,7 @@ public class DataTypeUtils {
 	 * 进行类型判断以及内容判断；<br />
 	 * 内容判断为判断字符串格式是否是时间格式；<br />
 	 * 字符串判断：<br />日期部分兼容减号、斜杠、点号分隔；<br />时间部分兼容冒号、点号；<br />兼容空格；<br />
+	 * 特别提醒：2011.11这种既是日期又是数字，在这里也返回true，单纯的2011也会返回true
 	 * @author hcqt@qq.com */
 	public static final boolean isDate(Object obj) {
 		if(null == obj) {
@@ -1317,7 +1318,8 @@ public class DataTypeUtils {
 			if(null == targetObject) {
 				ret = null;
 			} 
-			else if(isDate(targetObject)) {
+			// 这里需要既是日期，又不是数字才进行转换，存在例如数据2011.11|2011这种既是数字又是时间的数据中抉择的问题，那么此处偏向与认为这是一个数字，不转换为日期显示
+			else if(isDate(targetObject) && !isNumber(targetObject)) {
 				Date d = Object2Date.convert(targetObject);
 				ret = DU.format(d, DEF_DATE_FMT);
 			}
@@ -1345,7 +1347,8 @@ public class DataTypeUtils {
 					catch (BaseException e) { }
 				}
 			}
-			else if(isNumber(targetObject)) {
+			// 注意此处不用else if的原因是由于存在2011.11这种既是日期又是数字的情况，所以不能用else if做互斥代码
+			if(isNumber(targetObject)) {
 				try {  return new Date(DataTypeUtils.convert(Long.class, targetObject)); } 
 				catch (BaseException e) { }
 			}
