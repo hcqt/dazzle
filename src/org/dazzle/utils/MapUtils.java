@@ -1,8 +1,11 @@
 package org.dazzle.utils;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.dazzle.common.exception.BaseException;
 
@@ -85,7 +88,49 @@ public class MapUtils {
 		}
 		return DTU.convert(clazz, map.get(keys[keys.length]));
 	}
-	
+
+	/**@author hcqt@qq.com */
+	public static final void removeNullVal(Map<?, ?> map) {
+		if(map == null) {
+			return;
+		}
+		Set<Object> waitRemoveKeys = new HashSet<>();
+		for (Entry<?, ?> entry : map.entrySet()) {
+			if(entry.getValue() == null) {
+				waitRemoveKeys.add(entry.getKey());
+			}
+		}
+		for (Object waitRemoveKey : waitRemoveKeys) {
+			map.remove(waitRemoveKey);
+		}
+	}
+
+	/**@author hcqt@qq.com */
+	@SuppressWarnings("unchecked")
+	@SafeVarargs
+	public static final <T, N extends Map<T, T>> N put(Class<N> clazz, T... oddEvenKeyValPairs) {
+		if(oddEvenKeyValPairs == null) {
+			return null;
+		}
+		if(oddEvenKeyValPairs.length % 2 != 0) {
+			throw new BaseException("mapUtils_98k3G", "键值对必须成对出现，您传入的数组个数是奇数，不符合规定，异常数据——{0}", Arrays.toString(oddEvenKeyValPairs));
+		}
+		try {
+			N n;
+			if(clazz.isInterface()) {
+				n = (N) new HashMap<>();
+			} else {
+				n = clazz.newInstance();
+			}
+			for (int i = 0; i < oddEvenKeyValPairs.length; i+=2) {
+				n.put(oddEvenKeyValPairs[i], oddEvenKeyValPairs[i + 1]);
+			}
+			return n;
+		} catch (InstantiationException | IllegalAccessException e) {
+			throw new BaseException("mapUtils_p2hE3", "map无法实例化，详情——{0}", e, EU.out(e));
+		}
+	}
+
 	/**@see #get(Class, Map, String)
 	 * @author hcqt@qq.com */
 	public static final <T extends Map<? extends String, ?>> Object put(Map<String, Object> map, String express, Object val) {
