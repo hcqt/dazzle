@@ -1823,6 +1823,39 @@ public static int i = 0;
 		params.add(DTU.cvt(String.class, MU.getIgnoreCase(where, "val")));
 	}
 
+//	/**@author hcqt@qq.com*/
+//	private static final void createWhereSqlSwitch3(
+//			StringBuilder sql, 
+//			Map<String, Object> where, 
+//			Map<String, String> fieldsMapping, 
+//			Opt opt,
+//			List<Object> params) {
+//		sql.append(" ").append(aliasField(where, fieldsMapping));
+//		switch (opt) {
+//			case LK:
+//				sql.append(" LIKE '%?%'");
+//				break;
+//			case LKL:
+//				sql.append(" LIKE '%?'");
+//				break;
+//			case LKR:
+//				sql.append(" LIKE '?%'");
+//				break;
+//			case NLK:
+//				sql.append(" NOT LIKE '%?%'");
+//				break;
+//			case NLKL:
+//				sql.append(" NOT LIKE '%?'");
+//				break;
+//			case NLKR:
+//				sql.append(" NOT LIKE '?%'");
+//				break;
+//			default:
+//				// TODO
+//				break;
+//		}
+//		params.add(escapeSpecialChar(DTU.cvt(String.class, MU.getIgnoreCase(where, "val"))));
+//	}
 	/**@author hcqt@qq.com*/
 	private static final void createWhereSqlSwitch3(
 			StringBuilder sql, 
@@ -1831,30 +1864,31 @@ public static int i = 0;
 			Opt opt,
 			List<Object> params) {
 		sql.append(" ").append(aliasField(where, fieldsMapping));
+		String val = escapeSpecialChar(DTU.cvt(String.class, MU.getIgnoreCase(where, "val")));
 		switch (opt) {
 			case LK:
-				sql.append(" LIKE '%?%'");
+				sql.append(" LIKE '%" + val + "%'");
 				break;
 			case LKL:
-				sql.append(" LIKE '%?'");
+				sql.append(" LIKE '%" + val + "'");
 				break;
 			case LKR:
-				sql.append(" LIKE '?%'");
+				sql.append(" LIKE '" + val + "%'");
 				break;
 			case NLK:
-				sql.append(" NOT LIKE '%?%'");
+				sql.append(" NOT LIKE '%" + val + "%'");
 				break;
 			case NLKL:
-				sql.append(" NOT LIKE '%?'");
+				sql.append(" NOT LIKE '%" + val + "'");
 				break;
 			case NLKR:
-				sql.append(" NOT LIKE '?%'");
+				sql.append(" NOT LIKE '" + val + "%'");
 				break;
 			default:
 				// TODO
 				break;
 		}
-		params.add(escapeSpecialChar(DTU.cvt(String.class, MU.getIgnoreCase(where, "val"))));
+//		params.add(escapeSpecialChar(DTU.cvt(String.class, MU.getIgnoreCase(where, "val"))));
 	}
 
 	/**@author hcqt@qq.com*/
