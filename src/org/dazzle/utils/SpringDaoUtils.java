@@ -1545,6 +1545,10 @@ public static int i = 0;
 				}
 				if(null != conn) {
 					sql.append(" ").append(conn.trim().toUpperCase());
+				} 
+				// 如果没有设置，默认都用AND
+				else {
+					sql.append(" AND");
 				}
 			}
 		}
